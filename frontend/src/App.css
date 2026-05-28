@@ -1,0 +1,82 @@
+/* Sahal Styles */
+.hero-section {
+  background: linear-gradient(135deg, rgba(67, 56, 202, 0.05) 0%, rgba(249, 115, 22, 0.05) 100%);
+}
+
+.product-card {
+  transition: transform 200ms ease-out, box-shadow 200ms ease-out;
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.btn-primary {
+  background: #4338CA;
+  color: white;
+  transition: background 200ms ease-out, transform 100ms ease-out;
+}
+
+.btn-primary:hover {
+  background: #3730A3;
+  transform: translateY(-1px);
+}
+
+.btn-accent {
+  background: #F97316;
+  color: white;
+  transition: background 200ms ease-out, transform 100ms ease-out;
+}
+
+.btn-accent:hover {
+  background: #EA580C;
+  transform: translateY(-1px);
+}
+
+.header-glass {
+  backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.7);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.4);
+}
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .bento-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 2rem;
+  }
+}
+
+.control-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .control-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .control-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.stat-card {
+  border: 1px solid #E2E8F0;
+  transition: border-color 200ms ease-out;
+}
+
+.stat-card:hover {
+  border-color: #4338CA;
+}
