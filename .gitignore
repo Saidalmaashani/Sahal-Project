@@ -59,3 +59,5 @@ data/db/
 *.pem
 *.key
 secrets/
+.env.txt
+backend/pydantic-core
