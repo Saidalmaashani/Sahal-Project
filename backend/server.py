@@ -15,7 +15,7 @@ from fastapi import FastAPI, APIRouter, HTTPException, Header, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 from motor.motor_asyncio import AsyncIOMotorClient
-from passlib.context import CryptContext
+import bcrypt as _bcrypt
 import jwt as pyjwt
 
 # Optional integrations (تحميل اختياري لتجنب أخطاء عند عدم وجود المكتبات)
@@ -49,7 +49,7 @@ client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
 
 # Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 # Logging
 logging.basicConfig(
@@ -188,12 +188,12 @@ class ChatMessage(BaseModel):
 # ==================== AUTH HELPERS ====================
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return _bcrypt.hashpw(password.encode(), _bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
     try:
-        return pwd_context.verify(plain, hashed)
+        return _bcrypt.checkpw(plain.encode(), hashed.encode())
     except Exception:
         return False
 
