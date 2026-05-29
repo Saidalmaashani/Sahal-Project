@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: sahal-backend
+    runtime: python
+    buildCommand: pip install fastapi uvicorn motor pymongo pyjwt "passlib[bcrypt]" httpx python-dotenv
+    startCommand: cd backend && uvicorn server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: MONGO_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
