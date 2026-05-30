@@ -19,6 +19,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import MerchantDashboard from './pages/MerchantDashboard';
 import DriverDashboard from './pages/DriverDashboard';
 import MerchantProfile from './pages/MerchantProfile';
+import PaymentPage from './pages/PaymentPage';
 
 function AppRouter() {
   const location = useLocation();
@@ -44,6 +45,7 @@ function AppRouter() {
       <Route path="/merchant/dashboard" element={<MerchantDashboard />} />
       <Route path="/driver/dashboard" element={<DriverDashboard />} />
       <Route path="/merchant/profile" element={<MerchantProfile />} />
+      <Route path="/payment" element={<PaymentPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
