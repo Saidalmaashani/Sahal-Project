@@ -8,9 +8,11 @@ import logging
 import secrets
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
+from pathlib import Path
 
-from fastapi import FastAPI, APIRouter, HTTPException, Header, Request
+from fastapi import FastAPI, APIRouter, HTTPException, Header, Request, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from motor.motor_asyncio import AsyncIOMotorClient
 import bcrypt as _bcrypt
@@ -29,6 +31,14 @@ JWT_ALGORITHM = 'HS256'
 JWT_EXPIRES_HOURS = 24 * 7  # أسبوع
 
 STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', '')
+
+PLATFORM_FEE = 0.08   # 8% إجمالي
+ADMIN_FEE    = 0.04   # 4% للمدير
+DRIVER_FEE   = 0.04   # 4% للمندوب
+
+# Uploads directory
+UPLOAD_DIR = Path(__file__).parent / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
 
 # Database
 client = AsyncIOMotorClient(MONGO_URL)
@@ -102,9 +112,15 @@ class Product(BaseModel):
     store_id: Optional[str] = None
     name: str
     description: str
-    price: float
+    merchant_price: float        # السعر الذي حدده التاجر
+    price: float                 # سعر العميل = merchant_price * 1.08
+    admin_fee: float             # 4% من merchant_price
+    driver_fee: float            # 4% من merchant_price
     stock: int
     category: str
+    brand: Optional[str] = ""
+    sku: Optional[str] = ""
+    weight: Optional[float] = None
     images: List[str] = []
     created_at: str
 
@@ -112,9 +128,12 @@ class Product(BaseModel):
 class ProductCreate(BaseModel):
     name: str
     description: str
-    price: float
+    price: float          # السعر الذي يدخله التاجر (merchant_price)
     stock: int
     category: str
+    brand: Optional[str] = ""
+    sku: Optional[str] = ""
+    weight: Optional[float] = None
     images: List[str] = []
 
 
@@ -469,6 +488,11 @@ async def create_product(
     if not approved_store:
         raise HTTPException(status_code=400, detail="تحتاج لمتجر معتمد قبل إضافة المنتجات")
 
+    merchant_price = round(payload.price, 3)
+    customer_price = round(merchant_price * (1 + PLATFORM_FEE), 3)
+    admin_fee      = round(merchant_price * ADMIN_FEE, 3)
+    driver_fee     = round(merchant_price * DRIVER_FEE, 3)
+
     product_id = f"prod_{uuid.uuid4().hex[:12]}"
     product = Product(
         product_id=product_id,
@@ -476,9 +500,15 @@ async def create_product(
         store_id=approved_store["store_id"],
         name=payload.name,
         description=payload.description,
-        price=payload.price,
+        merchant_price=merchant_price,
+        price=customer_price,
+        admin_fee=admin_fee,
+        driver_fee=driver_fee,
         stock=payload.stock,
         category=payload.category,
+        brand=payload.brand,
+        sku=payload.sku,
+        weight=payload.weight,
         images=payload.images,
         created_at=datetime.now(timezone.utc).isoformat()
     )
@@ -1281,6 +1311,40 @@ async def get_chat_history(authorization: Optional[str] = Header(None), request:
     return messages
 
 
+# ==================== IMAGE UPLOAD ====================
+
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB
+
+@api_router.post("/upload/image")
+async def upload_image(
+    file: UploadFile = File(...),
+    authorization: Optional[str] = Header(None),
+    request: Request = None
+):
+    """رفع صورة منتج — يعيد URL الصورة"""
+    await get_current_user(authorization, request)
+
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail="نوع الملف غير مدعوم. استخدم JPEG أو PNG أو WebP")
+
+    contents = await file.read()
+    if len(contents) > MAX_IMAGE_SIZE:
+        raise HTTPException(status_code=400, detail="حجم الصورة يجب ألا يتجاوز 5MB")
+
+    ext = (file.filename or "image.jpg").rsplit(".", 1)[-1].lower()
+    if ext not in {"jpg", "jpeg", "png", "webp", "gif"}:
+        ext = "jpg"
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    filepath = UPLOAD_DIR / filename
+
+    with open(filepath, "wb") as f:
+        f.write(contents)
+
+    base_url = str(request.base_url).rstrip("/")
+    return {"url": f"{base_url}/uploads/{filename}"}
+
+
 # ==================== SEED ====================
 
 @api_router.post("/seed/admin")
@@ -1339,6 +1403,8 @@ app.add_middleware(
 async def shutdown_db_client():
     client.close()
 
+
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 @app.get("/")
 async def root():
