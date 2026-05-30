@@ -36,7 +36,7 @@ const Cart = () => {
 
   const removeItem = async (cartItemId) => {
     try {
-      await api.delete(`/cart/ر.ع {cartItemId}`);
+      await api.delete(`/cart/${cartItemId}`);
       setCartItems(cartItems.filter(item => item.cart_item_id !== cartItemId));
       toast.success('تمت إزالته');
     } catch { toast.error('فشلت الإزالة'); }

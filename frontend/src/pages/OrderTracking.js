@@ -30,7 +30,7 @@ const OrderTracking = () => {
 
   const fetchTracking = async () => {
     try {
-      const r = await api.get(`/orders/ر.ع {orderId}/tracking`);
+      const r = await api.get(`/orders/${orderId}/tracking`);
       setTracking(r.data);
     } catch (e) { toast.error(e.response?.data?.detail || 'فشل التحميل'); }
     finally { setLoading(false); }
@@ -102,7 +102,7 @@ const OrderTracking = () => {
                     <p className="font-medium">{tracking.driver_info.name}</p></div>
                   {tracking.driver_info.phone && (
                     <div><p className="text-xs uppercase text-[#475569] mb-1">الهاتف</p>
-                      <a href={`tel:ر.ع {tracking.driver_info.phone}`} className="text-[#4338CA] flex items-center gap-1" dir="ltr">
+                      <a href={`tel:${tracking.driver_info.phone}`} className="text-[#4338CA] flex items-center gap-1" dir="ltr">
                         <Phone className="h-4 w-4" />{tracking.driver_info.phone}
                       </a></div>
                   )}

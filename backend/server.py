@@ -447,7 +447,8 @@ async def oauth_session(request: Request):
 
     user.pop("_id", None)
     user.pop("password_hash", None)
-    return user
+    token = create_jwt_token(user["user_id"], user["role"])
+    return {"user": user, "token": token}
 
 
 # ==================== STORE ENDPOINTS ====================
@@ -921,7 +922,14 @@ async def get_deliveries(authorization: Optional[str] = Header(None), request: R
         driver = await db.delivery_drivers.find_one({"user_id": user["user_id"]}, {"_id": 0})
         if not driver:
             return []
-        orders = await db.orders.find({"driver_id": driver["driver_id"]}, {"_id": 0}).to_list(1000)
+        # Driver sees: their own assigned orders + available unassigned confirmed orders
+        orders = await db.orders.find(
+            {"$or": [
+                {"driver_id": driver["driver_id"]},
+                {"payment_status": "paid", "status": "confirmed", "driver_id": None}
+            ]},
+            {"_id": 0}
+        ).sort("created_at", -1).to_list(1000)
     else:
         orders = await db.orders.find(
             {"payment_status": "paid", "status": {"$in": ["confirmed", "shipped"]}},
@@ -1376,10 +1384,15 @@ async def health_check():
 app.include_router(api_router)
 
 # CORS - استخدم origins محددة في الإنتاج بدل *
-cors_origins = os.environ.get('CORS_ORIGINS', '*').split(',')
+# allow_credentials=True لا يعمل مع allow_origins=['*'] في المتصفحات
+cors_origins_raw = os.environ.get('CORS_ORIGINS', '')
+cors_origins = [o.strip() for o in cors_origins_raw.split(',') if o.strip()]
+if not cors_origins:
+    cors_origins = ['*']
+allow_creds = cors_origins != ['*']
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
+    allow_credentials=allow_creds,
     allow_origins=cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],

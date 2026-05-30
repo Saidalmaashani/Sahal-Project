@@ -39,7 +39,7 @@ const Referrals = () => {
   };
 
   const shareLink = () => {
-    const link = `ر.ع {window.location.origin}/register?ref=ر.ع {data.referral_code}`;
+    const link = `${window.location.origin}/register?ref=${data.referral_code}`;
     navigator.clipboard.writeText(link);
     toast.success('تم نسخ الرابط!');
   };
@@ -91,7 +91,7 @@ const Referrals = () => {
           {[
             { label: 'المدعوين', value: data?.total_referred || 0, icon: Users, color: '#4338CA' },
             { label: 'مكافآت', value: data?.total_rewarded || 0, icon: Gift, color: '#F97316' },
-            { label: 'الأرباح', value: `ر.ع ر.ع {data?.total_earnings?.toFixed(2) || '0.00'}`, icon: DollarSign, color: '#10B981' }
+            { label: 'الأرباح', value: `ر.ع ${data?.total_earnings?.toFixed(2) || '0.00'}`, icon: DollarSign, color: '#10B981' }
           ].map((s, i) => (
             <Card key={i} className="stat-card"><CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -113,7 +113,7 @@ const Referrals = () => {
             <p className="text-center text-[#475569] py-8">كن أول من يدعو!</p>
           ) : (
             <div className="space-y-3">{leaderboard.map((e, i) => (
-              <div key={e.user_id} className={`flex items-center justify-between p-4 rounded-lg border ر.ع {
+              <div key={e.user_id} className={`flex items-center justify-between p-4 rounded-lg border ${
                 e.user_id === user.user_id ? 'bg-[#4338CA]/5 border-[#4338CA]' : 'bg-white border-[#E2E8F0]'
               }`}>
                 <div className="flex items-center gap-4">

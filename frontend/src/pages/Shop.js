@@ -71,7 +71,7 @@ const Shop = () => {
 
   const renderProductCard = (product) => (
     <Card key={product.product_id} className="product-card overflow-hidden border border-[#E2E8F0]">
-      <div className="cursor-pointer" onClick={() => navigate(`/product/ر.ع {product.product_id}`)}>
+      <div className="cursor-pointer" onClick={() => navigate(`/product/${product.product_id}`)}>
         <div className="aspect-square overflow-hidden bg-[#F8F9FA]">
           <img src={product.images?.[0] || PLACEHOLDER_IMAGE} alt={product.name}
             className="w-full h-full object-cover" onError={handleImageError} />

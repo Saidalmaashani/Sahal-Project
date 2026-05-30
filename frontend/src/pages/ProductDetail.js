@@ -20,7 +20,7 @@ const ProductDetail = () => {
 
   const fetchProduct = async () => {
     try {
-      const response = await api.get(`/products/ر.ع {id}`);
+      const response = await api.get(`/products/${id}`);
       setProduct(response.data);
     } catch (error) {
       toast.error('المنتج غير موجود');
@@ -67,7 +67,7 @@ const ProductDetail = () => {
               <div className="mb-6">
                 <div className="text-4xl font-bold text-[#4338CA] mb-2">ر.ع {product.price.toFixed(2)}</div>
                 <div className="text-sm text-[#475569]">
-                  {product.stock > 0 ? `ر.ع {product.stock} متوفر في المخزون` : 'نفذ من المخزون'}
+                  {product.stock > 0 ? `${product.stock} متوفر في المخزون` : 'نفذ من المخزون'}
                 </div>
               </div>
               <Button className="w-full bg-[#F97316] hover:bg-[#EA580C] text-lg py-6"

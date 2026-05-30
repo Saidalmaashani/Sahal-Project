@@ -52,7 +52,7 @@ const AdminDashboard = () => {
 
   const approveUser = async (uid, ok) => {
     try {
-      await api.patch(`/admin/users/ر.ع {uid}/approve`, null, { params: { is_approved: ok } });
+      await api.patch(`/admin/users/${uid}/approve`, null, { params: { is_approved: ok } });
       toast.success(ok ? 'تمت الموافقة' : 'تم الرفض');
       fetchData();
     } catch { toast.error('فشل'); }
@@ -60,7 +60,7 @@ const AdminDashboard = () => {
 
   const updateStoreStatus = async (sid, status) => {
     try {
-      await api.patch(`/stores/ر.ع {sid}/status`, null, { params: { status } });
+      await api.patch(`/stores/${sid}/status`, null, { params: { status } });
       toast.success('تم التحديث');
       fetchData();
     } catch { toast.error('فشل'); }
@@ -68,7 +68,7 @@ const AdminDashboard = () => {
 
   const updateOrderStatus = async (oid, status) => {
     try {
-      await api.patch(`/orders/ر.ع {oid}/status`, null, { params: { status } });
+      await api.patch(`/orders/${oid}/status`, null, { params: { status } });
       toast.success('تم التحديث');
       fetchData();
     } catch { toast.error('فشل'); }
@@ -76,7 +76,7 @@ const AdminDashboard = () => {
 
   const assignDriver = async (oid, did) => {
     try {
-      await api.post(`/deliveries/ر.ع {oid}/assign`, null, { params: { driver_id: did } });
+      await api.post(`/deliveries/${oid}/assign`, null, { params: { driver_id: did } });
       toast.success('تم التخصيص');
       fetchData();
     } catch { toast.error('فشل'); }
@@ -111,7 +111,7 @@ const AdminDashboard = () => {
             { label: 'إجمالي المستخدمين', value: analytics?.total_users || 0, icon: Users, color: '#4338CA' },
             { label: 'إجمالي المنتجات', value: analytics?.total_products || 0, icon: Package, color: '#4338CA' },
             { label: 'إجمالي الطلبات', value: analytics?.total_orders || 0, icon: Store, color: '#4338CA' },
-            { label: 'إجمالي الإيرادات', value: `ر.ع ر.ع {analytics?.total_revenue?.toFixed(2) || '0.00'}`, icon: DollarSign, color: '#10B981' }
+            { label: 'إجمالي الإيرادات', value: `ر.ع ${analytics?.total_revenue?.toFixed(2) || '0.00'}`, icon: DollarSign, color: '#10B981' }
           ].map((s, i) => (
             <Card key={i} className="stat-card">
               <CardContent className="p-6">
@@ -150,7 +150,7 @@ const AdminDashboard = () => {
                       <TableCell dir="ltr">{u.email}</TableCell>
                       <TableCell>{getRoleArabic(u.role)}</TableCell>
                       <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ر.ع {
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           u.is_approved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                         }`}>{u.is_approved ? 'موافق عليه' : 'قيد الانتظار'}</span>
                       </TableCell>
@@ -187,7 +187,7 @@ const AdminDashboard = () => {
                         <p className="text-xs text-[#475569]" dir="ltr">{s.merchant_email || ''}</p>
                       </div></TableCell>
                       <TableCell className="max-w-xs truncate">{s.description}</TableCell>
-                      <TableCell><span className={`px-2 py-1 rounded-full text-xs font-medium ر.ع {
+                      <TableCell><span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         s.status === 'approved' ? 'bg-green-100 text-green-800' :
                         s.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
                       }`}>{getStatusArabic(s.status)}</span></TableCell>
@@ -217,7 +217,7 @@ const AdminDashboard = () => {
                       <TableCell className="font-mono text-sm" dir="ltr">{o.order_id}</TableCell>
                       <TableCell className="font-medium">ر.ع {o.total_amount.toFixed(2)}</TableCell>
                       <TableCell><span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{getStatusArabic(o.status)}</span></TableCell>
-                      <TableCell><span className={`px-2 py-1 rounded-full text-xs font-medium ر.ع {
+                      <TableCell><span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         o.payment_status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                       }`}>{getStatusArabic(o.payment_status)}</span></TableCell>
                       <TableCell>
@@ -295,7 +295,7 @@ const AdminDashboard = () => {
                       <TableCell dir="ltr">{d.email || '—'}</TableCell>
                       <TableCell>{d.vehicle_type}</TableCell>
                       <TableCell dir="ltr">{d.vehicle_number}</TableCell>
-                      <TableCell><span className={`px-2 py-1 rounded-full text-xs font-medium ر.ع {
+                      <TableCell><span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         d.is_available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}>{d.is_available ? 'متاح' : 'غير متاح'}</span></TableCell>
                     </TableRow>
