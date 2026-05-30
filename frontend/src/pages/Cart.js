@@ -51,8 +51,18 @@ const Cart = () => {
     setCheckingOut(true);
     try {
       const items = cartItems.map(item => ({ product_id: item.product_id, quantity: item.quantity }));
-      const response = await api.post('/checkout', { items, delivery_address: deliveryAddress });
-      window.location.href = response.data.checkout_url;
+      navigate('/payment', {
+        state: {
+          items: cartItems.map(item => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+            name: item.product?.name,
+            price: item.product?.price
+          })),
+          deliveryAddress,
+          total: calculateTotal()
+        }
+      });
     } catch (error) {
       toast.error(error.response?.data?.detail || 'فشل الدفع');
       setCheckingOut(false);
