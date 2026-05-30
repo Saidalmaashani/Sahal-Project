@@ -50,13 +50,17 @@ const PaymentPage = () => {
     await new Promise(resolve => setTimeout(resolve, 2500));
 
     try {
+      // 1) أنشئ الطلب
       const response = await api.post('/checkout', {
         items,
         delivery_address: deliveryAddress
       });
 
-      // تحديث حالة الدفع فوراً (mock)
+      // 2) تأكيد الدفع فوراً (mock payment)
       await api.get(`/payment/status/${response.data.session_id}`);
+
+      // 3) تأكيد إضافي لضمان تغيير الحالة
+      await api.patch(`/orders/${response.data.order_id}/status`, null, { params: { status: 'confirmed' } });
 
       setStep(3);
       setLoading(false);
