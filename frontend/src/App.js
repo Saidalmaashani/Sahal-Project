@@ -18,6 +18,7 @@ import OrderTracking from './pages/OrderTracking';
 import AdminDashboard from './pages/AdminDashboard';
 import MerchantDashboard from './pages/MerchantDashboard';
 import DriverDashboard from './pages/DriverDashboard';
+import MerchantProfile from './pages/MerchantProfile';
 
 function AppRouter() {
   const location = useLocation();
@@ -42,6 +43,7 @@ function AppRouter() {
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
       <Route path="/merchant/dashboard" element={<MerchantDashboard />} />
       <Route path="/driver/dashboard" element={<DriverDashboard />} />
+      <Route path="/merchant/profile" element={<MerchantProfile />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

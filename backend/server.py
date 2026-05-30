@@ -1138,6 +1138,25 @@ async def get_all_deliveries(authorization: Optional[str] = Header(None), reques
     return orders
 
 
+
+@api_router.get("/merchants/profile")
+async def get_merchant_profile(authorization: Optional[str] = Header(None), request: Request = None):
+    user = await get_current_user(authorization, request)
+    if user["role"] != "merchant":
+        raise HTTPException(status_code=403, detail="Merchants only")
+    return {"lat": user.get("lat"), "lng": user.get("lng")}
+
+@api_router.patch("/merchants/profile")
+async def update_merchant_profile(data: dict, authorization: Optional[str] = Header(None), request: Request = None):
+    user = await get_current_user(authorization, request)
+    if user["role"] != "merchant":
+        raise HTTPException(status_code=403, detail="Merchants only")
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {"lat": data.get("lat"), "lng": data.get("lng")}}
+    )
+    return {"message": "تم تحديث الموقع"}
+
 # ==================== REFERRAL ENDPOINTS ====================
 
 @api_router.get("/referrals/my")

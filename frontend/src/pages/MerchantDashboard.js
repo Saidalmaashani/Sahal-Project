@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { toast } from 'sonner';
-import { Store, Package, DollarSign, ArrowRight, Plus } from 'lucide-react';
+import { Store, Package, DollarSign, ArrowRight, Plus, MapPin } from 'lucide-react';
 import SupportChat from '../components/SupportChat';
 
 const getStatusArabic = (s) => ({
@@ -94,6 +94,9 @@ const MerchantDashboard = () => {
             <p className="text-sm text-[#475569]">أدر متجرك ومنتجاتك</p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate('/merchant/profile')} className="border-[#F97316] text-[#F97316] hover:bg-[#F97316] hover:text-white">
+              <MapPin className="h-4 w-4 ml-2" />موقع المتجر
+            </Button>
             <Button variant="outline" onClick={() => navigate('/shop')}>
               <ArrowRight className="h-4 w-4 ml-2" />العودة
             </Button>
