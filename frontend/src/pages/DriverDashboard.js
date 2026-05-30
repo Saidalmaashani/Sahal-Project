@@ -131,6 +131,14 @@ const DriverDashboard = () => {
     } catch (e) { toast.error(e.response?.data?.detail || "فشل القبول"); }
   };
 
+  const completeDelivery = async (orderId) => {
+    try {
+      await api.post(`/deliveries/${orderId}/complete`);
+      toast.success("تم التوصيل بنجاح! 🎉");
+      fetchData();
+    } catch (e) { toast.error(e.response?.data?.detail || "فشل"); }
+  };
+
   const registerDriver = async () => {
     try {
       await api.post("/drivers", form);
@@ -197,6 +205,12 @@ const DriverDashboard = () => {
           <Button className="w-full bg-[#10B981] hover:bg-[#059669]" onClick={() => acceptDelivery(order.order_id)}>
             <CheckCircle className="h-4 w-4 ml-2" />
             قبول الطلب
+          </Button>
+        )}
+        {!showAccept && order.status === "shipped" && (
+          <Button className="w-full bg-[#4338CA] hover:bg-[#3730A3]" onClick={() => completeDelivery(order.order_id)}>
+            <CheckCircle className="h-4 w-4 ml-2" />
+            تم التوصيل ✓
           </Button>
         )}
       </div>

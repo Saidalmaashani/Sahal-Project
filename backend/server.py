@@ -1029,6 +1029,32 @@ async def get_order_tracking(
 
 
 
+
+@api_router.post("/deliveries/{order_id}/complete")
+async def complete_delivery(order_id: str, authorization: Optional[str] = Header(None), request: Request = None):
+    """المندوب يُكمل التوصيل"""
+    user = await get_current_user(authorization, request)
+    if user["role"] != "driver":
+        raise HTTPException(status_code=403, detail="Drivers only")
+    driver = await db.delivery_drivers.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not driver:
+        raise HTTPException(status_code=404, detail="ملف المندوب غير موجود")
+    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="الطلب غير موجود")
+    if order.get("driver_id") != driver["driver_id"]:
+        raise HTTPException(status_code=403, detail="هذا الطلب ليس لك")
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {"$set": {"status": "delivered", "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    # المندوب أصبح متاحاً مجدداً
+    await db.delivery_drivers.update_one(
+        {"driver_id": driver["driver_id"]},
+        {"$set": {"is_available": True}}
+    )
+    return {"message": "تم التوصيل بنجاح"}
+
 @api_router.post("/deliveries/{order_id}/accept")
 async def accept_delivery(order_id: str, authorization: Optional[str] = Header(None), request: Request = None):
     """المندوب يقبل طلب توصيل تلقائياً"""
@@ -1050,6 +1076,10 @@ async def accept_delivery(order_id: str, authorization: Optional[str] = Header(N
     await db.orders.update_one(
         {"order_id": order_id},
         {"$set": {"driver_id": driver["driver_id"], "status": "shipped", "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    await db.delivery_drivers.update_one(
+        {"driver_id": driver["driver_id"]},
+        {"$set": {"is_available": False}}
     )
     return {"message": "تم قبول الطلب بنجاح"}
 
