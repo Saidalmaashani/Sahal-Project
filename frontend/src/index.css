@@ -6,6 +6,8 @@
 
 html {
   direction: rtl;
+  /* منع الـ overflow الأفقي على الموبايل */
+  overflow-x: hidden;
 }
 
 body {
@@ -14,6 +16,44 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   direction: rtl;
+  overflow-x: hidden;
+  /* دعم safe area للـ notch وشريط الـ home */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* إصلاح 100vh على Safari iOS */
+.min-h-screen {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  min-height: 100svh;
+}
+
+/* منع zoom تلقائي على iOS عند النقر على inputs */
+input, textarea, select {
+  font-size: 16px !important;
+}
+
+/* حجم كافٍ لـ touch targets على iPhone */
+button, a[href], [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iOS momentum scrolling */
+.overflow-y-auto,
+.overflow-auto,
+[class*="overflow-y"] {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* منع تحديد النص عند الضغط على الأزرار */
+button {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* إصلاح flex gap على iOS القديم */
+.space-x-reverse > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-x-reverse: 1;
 }
 
 code {

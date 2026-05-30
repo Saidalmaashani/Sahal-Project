@@ -80,3 +80,73 @@
 .stat-card:hover {
   border-color: #4338CA;
 }
+
+/* ===== Tables: تمرير أفقي على الموبايل ===== */
+@media (max-width: 768px) {
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+}
+
+/* ===== Mobile / iPhone ===== */
+
+/* جداول قابلة للتمرير أفقياً على الموبايل */
+.table-mobile-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* safe area لعناصر الـ fixed */
+.safe-bottom {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+.safe-bottom-btn {
+  bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
+/* header يراعي iOS notch */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+@media (max-width: 640px) {
+  /* منع overflow في الصفحات */
+  .container { padding-left: 1rem !important; padding-right: 1rem !important; }
+
+  /* أزرار أكبر على الموبايل */
+  .btn-mobile { min-height: 48px; padding: 12px 16px; font-size: 15px; }
+
+  /* عناوين أصغر على الموبايل */
+  h1.page-title { font-size: 1.5rem; }
+
+  /* إخفاء النص وإظهار الأيقونة فقط */
+  .mobile-icon-only .btn-text { display: none; }
+  .mobile-icon-only .h-4 { margin: 0 !important; }
+
+  /* جعل الـ grid عمود واحد */
+  .mobile-single-col {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* تصغير الـ card padding */
+  .card-mobile { padding: 12px !important; }
+
+  /* إخفاء عناصر desktop فقط */
+  .desktop-only { display: none !important; }
+
+  /* تعديل الـ tabs لتتناسب مع الموبايل */
+  [role="tablist"] button { font-size: 12px !important; padding: 6px 8px !important; }
+
+  /* dialog على الموبايل */
+  [role="dialog"] { margin: 8px !important; max-width: calc(100vw - 16px) !important; }
+}
+
+@media (max-width: 390px) {
+  /* iPhone SE / مقاسات صغيرة جداً */
+  .text-2xl { font-size: 1.25rem !important; }
+  .text-4xl { font-size: 1.75rem !important; }
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/api';
@@ -7,7 +7,7 @@ import { Input } from '../components/ui/input';
 import { Card, CardContent } from '../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { toast } from 'sonner';
-import { ShoppingCart, Search, LogOut, User, Sparkles, Gift, Package } from 'lucide-react';
+import { ShoppingCart, Search, LogOut, User, Sparkles, Gift, Package, Menu, X as XIcon, LayoutDashboard } from 'lucide-react';
 
 import SupportChat from '../components/SupportChat';
 
@@ -22,6 +22,8 @@ const Shop = () => {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     fetchProducts();
@@ -70,6 +72,13 @@ const Shop = () => {
     navigate('/');
   };
 
+  const getDashboardPath = () => {
+    if (user?.role === 'admin') return '/admin/dashboard';
+    if (user?.role === 'merchant') return '/merchant/dashboard';
+    if (user?.role === 'driver') return '/driver/dashboard';
+    return '/shop';
+  };
+
   const renderProductCard = (product) => (
     <Card key={product.product_id} className="product-card overflow-hidden border border-[#E2E8F0]">
       <div className="cursor-pointer" onClick={() => navigate(`/product/${product.product_id}`)}>
@@ -97,52 +106,90 @@ const Shop = () => {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
-      <header className="header-glass sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
+      <header className="header-glass sticky top-0 z-50" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <div className="container mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2 space-x-reverse cursor-pointer" onClick={() => navigate('/')}>
-              <div className="h-10 w-10 bg-gradient-to-br from-[#4338CA] to-[#F97316] rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">س</span>
+            {/* Logo */}
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+              <div className="h-9 w-9 bg-gradient-to-br from-[#4338CA] to-[#F97316] rounded-lg flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-bold text-lg">س</span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-2xl font-bold tracking-tighter text-[#4338CA] leading-none">سهل</span>
-                <span className="text-xs text-[#475569] tracking-wider">SAHAL</span>
+              <div className="flex flex-col leading-none">
+                <span className="text-xl font-bold text-[#4338CA]">سهل</span>
+                <span className="text-[10px] text-[#475569] tracking-wider">SAHAL</span>
               </div>
             </div>
-            <div className="flex items-center space-x-2 space-x-reverse">
+
+            <div className="flex items-center gap-2">
+              {/* أيقونات سريعة — تظهر دائماً */}
               {user && (
-                <>
-                  <Button variant="outline" size="sm" onClick={() => navigate('/cart')}>
-                    <ShoppingCart className="h-4 w-4 ml-2" />السلة
-                  </Button>
+                <button onClick={() => navigate('/cart')}
+                  style={{ padding: '8px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#fff', cursor: 'pointer', position: 'relative', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ShoppingCart style={{ width: 20, height: 20, color: '#4338CA' }} />
+                </button>
+              )}
+
+              {/* قائمة desktop */}
+              {user && (
+                <div className="hidden sm:flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={() => navigate('/my-orders')}>
-                    <Package className="h-4 w-4 ml-2" />طلباتي
+                    <Package className="h-4 w-4 ml-1" />طلباتي
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => navigate('/profile')}
-                    className="border-[#4338CA] text-[#4338CA] hover:bg-[#4338CA] hover:text-white">
-                    <User className="h-4 w-4 ml-2" />حسابي
+                    className="border-[#4338CA] text-[#4338CA]">
+                    <User className="h-4 w-4 ml-1" />حسابي
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => navigate('/referrals')}
-                    className="border-[#F97316] text-[#F97316] hover:bg-[#F97316] hover:text-white">
-                    <Gift className="h-4 w-4 ml-2" />الإحالات
+                    className="border-[#F97316] text-[#F97316]">
+                    <Gift className="h-4 w-4 ml-1" />الإحالات
                   </Button>
                   {user.role !== 'shopper' && (
-                    <Button variant="outline" size="sm" onClick={() => {
-                      if (user.role === 'admin') navigate('/admin/dashboard');
-                      else if (user.role === 'merchant') navigate('/merchant/dashboard');
-                      else if (user.role === 'driver') navigate('/driver/dashboard');
-                    }}>
-                      <User className="h-4 w-4 ml-2" />لوحة التحكم
+                    <Button variant="outline" size="sm" onClick={() => navigate(getDashboardPath())}>
+                      <LayoutDashboard className="h-4 w-4 ml-1" />لوحة التحكم
                     </Button>
                   )}
                   <Button variant="outline" size="sm" onClick={handleLogout}>
-                    <LogOut className="h-4 w-4 ml-2" />خروج
+                    <LogOut className="h-4 w-4" />
                   </Button>
-                </>
+                </div>
               )}
+
+              {/* زر القائمة للموبايل */}
+              {user && (
+                <div className="relative sm:hidden" ref={menuRef}>
+                  <button onClick={() => setMenuOpen(!menuOpen)}
+                    style={{ padding: '8px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#fff', cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {menuOpen ? <XIcon style={{ width: 20, height: 20 }} /> : <Menu style={{ width: 20, height: 20 }} />}
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {menuOpen && (
+                    <div style={{ position: 'absolute', top: '110%', left: 0, background: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '200px', zIndex: 100, overflow: 'hidden' }}>
+                      {[
+                        { icon: Package, label: 'طلباتي', path: '/my-orders' },
+                        { icon: User, label: 'حسابي', path: '/profile' },
+                        { icon: Gift, label: 'الإحالات', path: '/referrals' },
+                        ...(user.role !== 'shopper' ? [{ icon: LayoutDashboard, label: 'لوحة التحكم', path: getDashboardPath() }] : []),
+                      ].map(({ icon: Icon, label, path }) => (
+                        <button key={path} onClick={() => { navigate(path); setMenuOpen(false); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '14px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '15px', fontFamily: 'Tajawal,sans-serif', borderBottom: '1px solid #F1F5F9', direction: 'rtl' }}>
+                          <Icon style={{ width: 18, height: 18, color: '#4338CA' }} />
+                          {label}
+                        </button>
+                      ))}
+                      <button onClick={() => { handleLogout(); setMenuOpen(false); }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '14px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '15px', fontFamily: 'Tajawal,sans-serif', color: '#E11D48', direction: 'rtl' }}>
+                        <LogOut style={{ width: 18, height: 18 }} />
+                        تسجيل الخروج
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {!user && (
                 <Button className="bg-[#4338CA] hover:bg-[#3730A3]" size="sm" onClick={() => navigate('/login')}>
-                  تسجيل الدخول
+                  دخول
                 </Button>
               )}
             </div>

@@ -49,14 +49,23 @@ const SupportChat = () => {
     <>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 left-6 z-50 bg-[#4338CA] hover:bg-[#3730A3] text-white rounded-full p-4 shadow-lg transition-transform duration-200 hover:scale-110"
+        className="fixed z-50 bg-[#4338CA] hover:bg-[#3730A3] text-white rounded-full p-4 shadow-lg transition-transform duration-200 hover:scale-110"
+        style={{ left: '1.5rem', bottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
         aria-label="فتح الدردشة"
       >
         {isOpen ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
       </button>
 
       {isOpen && (
-        <div className="fixed bottom-24 left-6 z-50 w-80 sm:w-96 h-[500px] bg-white rounded-lg shadow-2xl border border-[#E2E8F0] flex flex-col">
+        <div className="fixed z-50 bg-white rounded-lg shadow-2xl border border-[#E2E8F0] flex flex-col"
+          style={{
+            left: '1rem', right: '1rem',
+            bottom: 'calc(max(1.5rem, env(safe-area-inset-bottom)) + 72px)',
+            maxWidth: '420px',
+            width: 'auto',
+            height: 'min(500px, calc(100svh - 160px))',
+            margin: '0 auto',
+          }}>
           <div className="bg-[#4338CA] text-white p-4 rounded-t-lg">
             <h3 className="font-bold text-lg">مساعد سهل</h3>
             <p className="text-xs opacity-90">مدعوم بالذكاء الاصطناعي</p>

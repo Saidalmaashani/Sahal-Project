@@ -255,7 +255,7 @@ const OrderTracking = () => {
           </CardContent>
         </Card>
 
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
           {/* الخريطة */}
           <div className="lg:col-span-2">

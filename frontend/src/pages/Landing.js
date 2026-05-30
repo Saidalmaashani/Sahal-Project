@@ -34,7 +34,7 @@ const Landing = () => {
       {/* Hero */}
       <section className="hero-section py-20 lg:py-32">
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div className="space-y-8">
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#0F172A] leading-tight">
                 منصة <span className="text-[#4338CA]">التجارة الإلكترونية</span> المتكاملة
