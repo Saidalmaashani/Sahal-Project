@@ -20,9 +20,6 @@ httpx==0.27.2
 # Data Validation
 pydantic[email]==2.9.2
 
-# Optional - Emergent integrations (للدفع و AI)
-# emergentintegrations>=1.0.0
-
 # Development
 pytest==8.3.3
 pytest-asyncio==0.24.0

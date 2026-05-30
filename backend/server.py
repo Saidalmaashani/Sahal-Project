@@ -17,21 +17,11 @@ from pydantic import BaseModel, EmailStr, Field
 from motor.motor_asyncio import AsyncIOMotorClient
 import bcrypt as _bcrypt
 import jwt as pyjwt
+from dotenv import load_dotenv
 
-# Optional integrations (تحميل اختياري لتجنب أخطاء عند عدم وجود المكتبات)
-try:
-    from emergentintegrations.payments.stripe.checkout import (
-        StripeCheckout, CheckoutSessionRequest
-    )
-    STRIPE_AVAILABLE = True
-except ImportError:
-    STRIPE_AVAILABLE = False
+load_dotenv()
 
-try:
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
-    LLM_AVAILABLE = True
-except ImportError:
-    LLM_AVAILABLE = False
+import httpx
 
 # ==================== CONFIG ====================
 ROOT_DIR = Path(__file__).parent
@@ -42,7 +32,6 @@ JWT_ALGORITHM = 'HS256'
 JWT_EXPIRES_HOURS = 24 * 7  # أسبوع
 
 STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', '')
-EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 
 # Database
 client = AsyncIOMotorClient(MONGO_URL)
@@ -391,64 +380,6 @@ async def google_auth(request: Request):
     token = create_jwt_token(user["user_id"], user["role"])
     return {"user": user, "token": token}
 
-@api_router.post("/auth/session")
-async def oauth_session(request: Request):
-    """تبادل session_id من Emergent OAuth"""
-    session_id = request.headers.get("X-Session-ID")
-    if not session_id:
-        raise HTTPException(status_code=400, detail="Missing X-Session-ID header")
-
-    # في النسخة الحقيقية: استدعاء Emergent Auth API للتحقق
-    # هنا نعمل mock للتطوير المحلي
-    # TODO: استبدل بـ HTTP call حقيقي لـ Emergent Auth
-    import httpx
-    try:
-        async with httpx.AsyncClient(timeout=15) as http:
-            r = await http.get(
-                "https://auth.emergentagent.com/api/session",
-                headers={"X-Session-ID": session_id}
-            )
-            if r.status_code != 200:
-                raise HTTPException(status_code=401, detail="Invalid session")
-            data = r.json()
-            email = data.get("email", "").lower()
-            name = data.get("name", "مستخدم")
-            picture = data.get("picture", "")
-    except httpx.HTTPError:
-        raise HTTPException(status_code=503, detail="Auth service unavailable")
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid session")
-
-    # ابحث أو أنشئ المستخدم
-    user = await db.users.find_one({"email": email})
-    if not user:
-        user_id = f"user_{uuid.uuid4().hex[:12]}"
-        new_user = User(
-            user_id=user_id,
-            email=email,
-            name=name,
-            role="shopper",
-            is_approved=True,
-            referral_code=f"SAHAL{uuid.uuid4().hex[:6].upper()}",
-            created_at=datetime.now(timezone.utc).isoformat(),
-            auth_provider="google"
-        )
-        await db.users.insert_one(new_user.model_dump())
-        user = new_user.model_dump()
-
-    # خزّن الجلسة
-    await db.user_sessions.insert_one({
-        "session_id": session_id,
-        "user_id": user["user_id"],
-        "created_at": datetime.now(timezone.utc).isoformat()
-    })
-
-    user.pop("_id", None)
-    user.pop("password_hash", None)
-    token = create_jwt_token(user["user_id"], user["role"])
-    return {"user": user, "token": token}
 
 
 # ==================== STORE ENDPOINTS ====================
@@ -700,46 +631,45 @@ async def checkout(
     )
     await db.orders.insert_one(order.model_dump())
 
-    # Stripe checkout (اختياري)
-    if STRIPE_AVAILABLE and STRIPE_API_KEY:
-        host_url = str(request.base_url).rstrip('/')
-        origin = request.headers.get('origin', host_url)
+    # Stripe Checkout مباشر (إذا كان STRIPE_API_KEY مضبوطاً)
+    if STRIPE_API_KEY:
+        origin = request.headers.get('origin', str(request.base_url).rstrip('/'))
         success_url = f"{origin}/order-success?session_id={{CHECKOUT_SESSION_ID}}"
         cancel_url = f"{origin}/cart"
-        webhook_url = f"{host_url}/api/webhook/stripe"
-
-        stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
-        checkout_request = CheckoutSessionRequest(
-            amount=total,
-            currency="usd",
-            success_url=success_url,
-            cancel_url=cancel_url,
-            metadata={"order_id": order_id, "user_id": user["user_id"]},
-            payment_methods=["card"]
-        )
-        session = await stripe_checkout.create_checkout_session(checkout_request)
-
+        async with httpx.AsyncClient() as http:
+            resp = await http.post(
+                "https://api.stripe.com/v1/checkout/sessions",
+                auth=(STRIPE_API_KEY, ""),
+                data={
+                    "payment_method_types[]": "card",
+                    "line_items[0][price_data][currency]": "usd",
+                    "line_items[0][price_data][unit_amount]": str(int(total * 100)),
+                    "line_items[0][price_data][product_data][name]": "طلب سهل",
+                    "line_items[0][quantity]": "1",
+                    "mode": "payment",
+                    "success_url": success_url,
+                    "cancel_url": cancel_url,
+                    "metadata[order_id]": order_id,
+                    "metadata[user_id]": user["user_id"],
+                }
+            )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail="فشل إنشاء جلسة الدفع")
+        session = resp.json()
         await db.payment_transactions.insert_one({
             "transaction_id": f"txn_{uuid.uuid4().hex[:12]}",
             "order_id": order_id,
-            "session_id": session.session_id,
+            "session_id": session["id"],
             "user_id": user["user_id"],
             "amount": total,
             "currency": "usd",
             "payment_status": "pending",
             "created_at": datetime.now(timezone.utc).isoformat()
         })
-
         await db.cart_items.delete_many({"user_id": user["user_id"]})
-
-        return {
-            "checkout_url": session.url,
-            "session_id": session.session_id,
-            "order_id": order_id
-        }
+        return {"checkout_url": session["url"], "session_id": session["id"], "order_id": order_id}
     else:
-        # Mock للتطوير
-        await db.cart_items.delete_many({"user_id": user["user_id"]})
+        # Mock للتطوير — يؤكد الطلب فوراً
         mock_session = f"cs_mock_{uuid.uuid4().hex[:12]}"
         await db.payment_transactions.insert_one({
             "transaction_id": f"txn_{uuid.uuid4().hex[:12]}",
@@ -748,26 +678,16 @@ async def checkout(
             "user_id": user["user_id"],
             "amount": total,
             "currency": "usd",
-            "payment_status": "pending",
+            "payment_status": "paid",
             "created_at": datetime.now(timezone.utc).isoformat()
         })
-        # تأكيد الطلب فوراً في وضع التطوير
         await db.orders.update_one(
             {"order_id": order_id},
             {"$set": {"payment_status": "paid", "status": "confirmed"}}
         )
-        await db.payment_transactions.update_one(
-            {"session_id": mock_session},
-            {"$set": {"payment_status": "paid"}}
-        )
-        # معالجة مكافأة الإحالة
+        await db.cart_items.delete_many({"user_id": user["user_id"]})
         await _process_referral_reward(user["user_id"], total)
-        
-        return {
-            "checkout_url": f"/order-success?session_id={mock_session}",
-            "session_id": mock_session,
-            "order_id": order_id
-        }
+        return {"checkout_url": f"/order-success?session_id={mock_session}", "session_id": mock_session, "order_id": order_id}
 
 
 @api_router.get("/payment/status/{session_id}")
@@ -776,32 +696,41 @@ async def get_payment_status(session_id: str):
     if not transaction:
         raise HTTPException(status_code=404, detail="معاملة غير موجودة")
 
-    if STRIPE_AVAILABLE and STRIPE_API_KEY and not session_id.startswith("cs_mock_"):
-        webhook_url = "https://placeholder.com/webhook"
-        stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
-        status = await stripe_checkout.get_checkout_status(session_id)
-
-        if transaction["payment_status"] != "paid" and status.payment_status == "paid":
+    if STRIPE_API_KEY and not session_id.startswith("cs_mock_"):
+        # تحقق من حالة الدفع عبر Stripe API مباشرة
+        async with httpx.AsyncClient() as http:
+            resp = await http.get(
+                f"https://api.stripe.com/v1/checkout/sessions/{session_id}",
+                auth=(STRIPE_API_KEY, "")
+            )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail="فشل التحقق من الدفع")
+        stripe_data = resp.json()
+        payment_status = stripe_data.get("payment_status", "unpaid")
+        if transaction["payment_status"] != "paid" and payment_status == "paid":
+            order_id = stripe_data.get("metadata", {}).get("order_id")
+            user_id = stripe_data.get("metadata", {}).get("user_id")
             await db.payment_transactions.update_one(
-                {"session_id": session_id},
-                {"$set": {"payment_status": "paid"}}
+                {"session_id": session_id}, {"$set": {"payment_status": "paid"}}
             )
-            order_id = status.metadata.get("order_id")
-            await db.orders.update_one(
-                {"order_id": order_id},
-                {"$set": {"payment_status": "paid", "status": "confirmed"}}
-            )
-            # Referral reward
-            user_id = status.metadata.get("user_id")
+            if order_id:
+                await db.orders.update_one(
+                    {"order_id": order_id},
+                    {"$set": {"payment_status": "paid", "status": "confirmed"}}
+                )
             if user_id:
-                await _process_referral_reward(user_id, status.amount_total / 100)
-
-        return status.model_dump()
+                await _process_referral_reward(user_id, stripe_data.get("amount_total", 0) / 100)
+        return {
+            "session_id": session_id,
+            "payment_status": payment_status,
+            "amount_total": stripe_data.get("amount_total", 0),
+            "currency": stripe_data.get("currency", "usd"),
+            "metadata": stripe_data.get("metadata", {})
+        }
     else:
-        # Mock: نعتبر الدفع نجح بعد ثانية
+        # Mock
         await db.payment_transactions.update_one(
-            {"session_id": session_id},
-            {"$set": {"payment_status": "paid"}}
+            {"session_id": session_id}, {"$set": {"payment_status": "paid"}}
         )
         await db.orders.update_one(
             {"order_id": transaction["order_id"]},
@@ -1303,26 +1232,19 @@ async def send_chat_message(
 ):
     user = await get_current_user(authorization, request)
 
-    if LLM_AVAILABLE and EMERGENT_LLM_KEY:
-        try:
-            chat = LlmChat(
-                api_key=EMERGENT_LLM_KEY,
-                session_id=f"support_{user['user_id']}",
-                system_message="أنت مساعد خدمة العملاء لمنصة سهل. ساعد المستخدمين بود واحترافية. أجب دائماً بالعربية."
-            ).with_model("openai", "gpt-4o-mini")
-            response = await chat.send_message(UserMessage(text=message))
-        except Exception as e:
-            logger.error(f"Chat error: {e}")
-            response = "عذراً، أواجه مشكلة في معالجة طلبك حالياً. سيتواصل معك فريق الدعم قريباً."
-    else:
-        # Fallback ردود بسيطة
-        responses = {
-            "السلام": "وعليكم السلام ورحمة الله! كيف يمكنني مساعدتك في سهل؟",
-            "مرحبا": "مرحباً بك في سهل! كيف يمكنني مساعدتك؟",
-            "طلب": "يمكنك مراجعة طلباتك من قائمة 'طلباتي'. هل تحتاج مساعدة محددة؟",
-            "default": "شكراً لتواصلك. لو احتجت مساعدة محددة في طلباتك أو حسابك، تواصل مع فريق الدعم."
-        }
-        response = next((v for k, v in responses.items() if k in message), responses["default"])
+    # ردود ذكية بسيطة — يمكن استبدالها بـ OpenAI API مباشرة لاحقاً
+    keywords = {
+        "السلام": "وعليكم السلام ورحمة الله! كيف يمكنني مساعدتك في سهل؟",
+        "مرحبا": "مرحباً بك في سهل! كيف يمكنني مساعدتك اليوم؟",
+        "طلب": "يمكنك مراجعة طلباتك من لوحة التحكم. هل تحتاج مساعدة في طلب معين؟",
+        "دفع": "ندعم الدفع بالبطاقة البنكية عبر Stripe. المدفوعات آمنة ومشفرة بالكامل.",
+        "توصيل": "يتم تخصيص مندوب توصيل تلقائياً بعد تأكيد الدفع. يمكنك تتبع طلبك من صفحة التتبع.",
+        "متجر": "لإنشاء متجر، سجّل كتاجر وأرسل طلب إنشاء متجر. سيراجعه الفريق خلال 24 ساعة.",
+        "كلمة المرور": "لاسترجاع كلمة المرور، تواصل مع الدعم عبر البريد الإلكتروني.",
+        "إحالة": "برنامج الإحالة يمنحك 10% من قيمة أول طلب لكل صديق تدعوه.",
+    }
+    response = next((v for k, v in keywords.items() if k in message),
+                    "شكراً لتواصلك مع سهل! سيتواصل معك فريق الدعم في أقرب وقت. 😊")
 
     await db.chat_messages.insert_one({
         "message_id": f"msg_{uuid.uuid4().hex[:12]}",
