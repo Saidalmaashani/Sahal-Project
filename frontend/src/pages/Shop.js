@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { ShoppingCart, Search, LogOut, User, Sparkles, Gift, Package, Menu, X as XIcon, LayoutDashboard } from 'lucide-react';
 
 import SupportChat from '../components/SupportChat';
+import NotificationBell from '../components/NotificationBell';
 
 const PLACEHOLDER_IMAGE = 'https://images.pexels.com/photos/17938771/pexels-photo-17938771.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940';
 const handleImageError = (e) => { e.target.src = PLACEHOLDER_IMAGE; };
@@ -123,10 +124,13 @@ const Shop = () => {
             <div className="flex items-center gap-2">
               {/* أيقونات سريعة — تظهر دائماً */}
               {user && (
-                <button onClick={() => navigate('/cart')}
-                  style={{ padding: '8px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#fff', cursor: 'pointer', position: 'relative', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ShoppingCart style={{ width: 20, height: 20, color: '#4338CA' }} />
-                </button>
+                <>
+                  <NotificationBell />
+                  <button onClick={() => navigate('/cart')}
+                    style={{ padding: '8px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#fff', cursor: 'pointer', position: 'relative', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ShoppingCart style={{ width: 20, height: 20, color: '#4338CA' }} />
+                  </button>
+                </>
               )}
 
               {/* قائمة desktop */}

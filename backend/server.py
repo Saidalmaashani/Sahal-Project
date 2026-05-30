@@ -171,6 +171,17 @@ class UserProfileUpdate(BaseModel):
     lng: Optional[float] = None
 
 
+class Notification(BaseModel):
+    notification_id: str
+    user_id: str
+    type: str
+    title: str
+    message: str
+    is_read: bool = False
+    link: Optional[str] = None
+    created_at: str
+
+
 class DeliveryDriver(BaseModel):
     driver_id: str
     user_id: str
@@ -507,12 +518,21 @@ async def update_store_status(
     if status not in ["pending", "approved", "rejected"]:
         raise HTTPException(status_code=400, detail="حالة غير صالحة")
 
-    result = await db.stores.update_one(
-        {"store_id": store_id},
-        {"$set": {"status": status}}
-    )
-    if result.matched_count == 0:
+    store = await db.stores.find_one({"store_id": store_id}, {"_id": 0})
+    if not store:
         raise HTTPException(status_code=404, detail="المتجر غير موجود")
+    await db.stores.update_one({"store_id": store_id}, {"$set": {"status": status}})
+    # إشعار للتاجر
+    if status == "approved":
+        await _create_notification(store["merchant_id"], "store_approved",
+            "تمت الموافقة على متجرك! 🎉",
+            f"متجرك '{store['name']}' موافق عليه ويمكنك الآن إضافة منتجات",
+            "/merchant/dashboard")
+    elif status == "rejected":
+        await _create_notification(store["merchant_id"], "store_rejected",
+            "تم رفض طلب المتجر",
+            f"للأسف تم رفض متجرك '{store['name']}'. تواصل مع الإدارة",
+            "/merchant/dashboard")
     return {"message": "تم تحديث حالة المتجر"}
 
 
@@ -778,6 +798,20 @@ async def checkout(
             )
         await db.cart_items.delete_many({"user_id": user["user_id"]})
         await _process_referral_reward(user["user_id"], total)
+        # إشعار للمتسوق
+        await _create_notification(user["user_id"], "order_confirmed",
+            "تم تأكيد طلبك!", f"طلبك #{order_id[-8:]} تم تأكيده وسيُجهَّز قريباً",
+            f"/my-orders")
+        # إشعار للتجار المعنيين
+        merchant_ids = set()
+        for item in checkout_data.items:
+            prod = await db.products.find_one({"product_id": item["product_id"]}, {"_id": 0})
+            if prod:
+                merchant_ids.add(prod["merchant_id"])
+        for mid in merchant_ids:
+            await _create_notification(mid, "new_order",
+                "طلب جديد!", f"وصلك طلب جديد بقيمة {total:.3f} ر.ع",
+                "/merchant/dashboard")
         return {"checkout_url": f"/order-success?session_id={mock_session}", "session_id": mock_session, "order_id": order_id}
 
 
@@ -837,6 +871,20 @@ async def get_payment_status(session_id: str):
         }
 
 
+async def _create_notification(user_id: str, notif_type: str, title: str, message: str, link: str = None):
+    """إنشاء إشعار لمستخدم"""
+    await db.notifications.insert_one({
+        "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+        "user_id": user_id,
+        "type": notif_type,
+        "title": title,
+        "message": message,
+        "is_read": False,
+        "link": link,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+
+
 async def _process_referral_reward(user_id: str, amount: float):
     """معالجة مكافأة الإحالة عند أول شراء"""
     buyer = await db.users.find_one({"user_id": user_id}, {"_id": 0})
@@ -854,6 +902,13 @@ async def _process_referral_reward(user_id: str, amount: float):
             await db.referrals.update_one(
                 {"referred_id": user_id},
                 {"$set": {"status": "rewarded", "reward_amount": reward}}
+            )
+            # إشعار لصاحب الإحالة
+            await _create_notification(
+                buyer["referred_by"], "referral_reward",
+                "مكافأة إحالة!",
+                f"حصلت على {reward} ر.ع من إحالة صديق",
+                "/referrals"
             )
 
 
@@ -1088,11 +1143,15 @@ async def complete_delivery(order_id: str, authorization: Optional[str] = Header
         {"order_id": order_id},
         {"$set": {"status": "delivered", "updated_at": datetime.now(timezone.utc).isoformat()}}
     )
-    # المندوب أصبح متاحاً مجدداً
     await db.delivery_drivers.update_one(
         {"driver_id": driver["driver_id"]},
         {"$set": {"is_available": True}}
     )
+    # إشعار للمتسوق
+    await _create_notification(order["user_id"], "order_delivered",
+        "تم توصيل طلبك! ✅",
+        f"طلبك #{order_id[-8:]} وصل بنجاح. نتمنى أن تكون راضياً",
+        "/my-orders")
     return {"message": "تم التوصيل بنجاح"}
 
 @api_router.post("/deliveries/{order_id}/accept")
@@ -1123,6 +1182,11 @@ async def accept_delivery(order_id: str, authorization: Optional[str] = Header(N
         {"driver_id": driver["driver_id"]},
         {"$set": {"is_available": False}}
     )
+    # إشعار للمتسوق
+    await _create_notification(order["user_id"], "order_shipped",
+        "المندوب في الطريق إليك! 🚚",
+        f"طلبك #{order_id[-8:]} تم استلامه من المندوب وهو في طريقه إليك",
+        f"/track/{order_id}")
     return {"message": "تم قبول الطلب بنجاح"}
 
 # ==================== ADMIN ENDPOINTS ====================
@@ -1313,6 +1377,49 @@ async def get_referral_leaderboard():
         {"$limit": 10}
     ]
     return await db.users.aggregate(pipeline).to_list(10)
+
+
+# ==================== NOTIFICATIONS ====================
+
+@api_router.get("/notifications")
+async def get_notifications(authorization: Optional[str] = Header(None), request: Request = None):
+    user = await get_current_user(authorization, request)
+    notifs = await db.notifications.find(
+        {"user_id": user["user_id"]}, {"_id": 0}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    unread = sum(1 for n in notifs if not n.get("is_read"))
+    return {"notifications": notifs, "unread_count": unread}
+
+
+@api_router.patch("/notifications/{notification_id}/read")
+async def mark_notification_read(
+    notification_id: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None
+):
+    user = await get_current_user(authorization, request)
+    await db.notifications.update_one(
+        {"notification_id": notification_id, "user_id": user["user_id"]},
+        {"$set": {"is_read": True}}
+    )
+    return {"message": "تم"}
+
+
+@api_router.patch("/notifications/read-all")
+async def mark_all_read(authorization: Optional[str] = Header(None), request: Request = None):
+    user = await get_current_user(authorization, request)
+    await db.notifications.update_many(
+        {"user_id": user["user_id"], "is_read": False},
+        {"$set": {"is_read": True}}
+    )
+    return {"message": "تم تحديد الكل كمقروء"}
+
+
+@api_router.delete("/notifications/clear")
+async def clear_read_notifications(authorization: Optional[str] = Header(None), request: Request = None):
+    user = await get_current_user(authorization, request)
+    await db.notifications.delete_many({"user_id": user["user_id"], "is_read": True})
+    return {"message": "تم حذف الإشعارات المقروءة"}
 
 
 # ==================== CHAT ENDPOINTS ====================
