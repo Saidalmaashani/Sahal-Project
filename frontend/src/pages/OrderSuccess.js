@@ -22,7 +22,7 @@ const OrderSuccess = () => {
     const interval = setInterval(async () => {
       if (attempts >= 5) { clearInterval(interval); setChecking(false); return; }
       try {
-        const response = await api.get(`/payment/status/${sessionId}`);
+        const response = await api.get(`/payment/status/ر.ع {sessionId}`);
         if (response.data.payment_status === 'paid') {
           setPaymentStatus('success'); setChecking(false); clearInterval(interval);
         }

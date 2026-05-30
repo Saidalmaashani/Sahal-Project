@@ -36,7 +36,7 @@ const Cart = () => {
 
   const removeItem = async (cartItemId) => {
     try {
-      await api.delete(`/cart/${cartItemId}`);
+      await api.delete(`/cart/ر.ع {cartItemId}`);
       setCartItems(cartItems.filter(item => item.cart_item_id !== cartItemId));
       toast.success('تمت إزالته');
     } catch { toast.error('فشلت الإزالة'); }
@@ -99,10 +99,10 @@ const Cart = () => {
                         <div className="flex items-center justify-between">
                           <div>
                             <span className="text-lg font-bold text-[#4338CA]">
-                              ${((item.product?.price || 0) * item.quantity).toFixed(2)}
+                              ر.ع {((item.product?.price || 0) * item.quantity).toFixed(2)}
                             </span>
                             <span className="text-sm text-[#475569] mr-2">
-                              (${item.product?.price.toFixed(2)} × {item.quantity})
+                              (ر.ع {item.product?.price.toFixed(2)} × {item.quantity})
                             </span>
                           </div>
                           <Button variant="destructive" size="sm" onClick={() => removeItem(item.cart_item_id)}>
@@ -127,15 +127,15 @@ const Cart = () => {
                   <div className="border-t pt-4">
                     <div className="flex justify-between mb-2">
                       <span className="text-[#475569]">المجموع الفرعي</span>
-                      <span className="font-medium">${calculateTotal().toFixed(2)}</span>
+                      <span className="font-medium">ر.ع {calculateTotal().toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between mb-4">
                       <span className="text-[#475569]">الشحن</span>
-                      <span className="font-medium">$0.00</span>
+                      <span className="font-medium">ر.ع 0.00</span>
                     </div>
                     <div className="flex justify-between text-xl font-bold border-t pt-4">
                       <span>المجموع الكلي</span>
-                      <span className="text-[#4338CA]">${calculateTotal().toFixed(2)}</span>
+                      <span className="text-[#4338CA]">ر.ع {calculateTotal().toFixed(2)}</span>
                     </div>
                   </div>
                   <Button className="w-full bg-[#F97316] hover:bg-[#EA580C]"

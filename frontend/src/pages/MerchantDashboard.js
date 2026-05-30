@@ -107,7 +107,7 @@ const MerchantDashboard = () => {
           {[
             { label: 'إجمالي المنتجات', value: products.length, icon: Package, color: '#4338CA' },
             { label: 'إجمالي الطلبات', value: orders.length, icon: Store, color: '#4338CA' },
-            { label: 'الإيرادات', value: `$${analytics?.total_revenue?.toFixed(2) || '0.00'}`, icon: DollarSign, color: '#10B981' }
+            { label: 'الإيرادات', value: `ر.ع ر.ع {analytics?.total_revenue?.toFixed(2) || '0.00'}`, icon: DollarSign, color: '#10B981' }
           ].map((s, i) => (
             <Card key={i} className="stat-card">
               <CardContent className="p-6">
@@ -166,7 +166,7 @@ const MerchantDashboard = () => {
                           <h3 className="font-medium text-lg">{s.name}</h3>
                           <p className="text-sm text-[#475569] mt-1">{s.description}</p>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ر.ع {
                           s.status === 'approved' ? 'bg-green-100 text-green-800' :
                           s.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
                         }`}>{getStatusArabic(s.status)}</span>
@@ -227,7 +227,7 @@ const MerchantDashboard = () => {
                       <TableRow key={p.product_id}>
                         <TableCell className="font-medium">{p.name}</TableCell>
                         <TableCell>{p.category}</TableCell>
-                        <TableCell>${p.price.toFixed(2)}</TableCell>
+                        <TableCell>ر.ع {p.price.toFixed(2)}</TableCell>
                         <TableCell>{p.stock}</TableCell>
                       </TableRow>
                     ))}</TableBody>
@@ -250,9 +250,9 @@ const MerchantDashboard = () => {
                   <TableBody>{orders.map((o) => (
                     <TableRow key={o.order_id}>
                       <TableCell className="font-mono text-sm" dir="ltr">{o.order_id}</TableCell>
-                      <TableCell className="font-medium">${o.total_amount.toFixed(2)}</TableCell>
+                      <TableCell className="font-medium">ر.ع {o.total_amount.toFixed(2)}</TableCell>
                       <TableCell><span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{getStatusArabic(o.status)}</span></TableCell>
-                      <TableCell><span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      <TableCell><span className={`px-2 py-1 rounded-full text-xs font-medium ر.ع {
                         o.payment_status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                       }`}>{getStatusArabic(o.payment_status)}</span></TableCell>
                     </TableRow>

@@ -71,7 +71,7 @@ const Shop = () => {
 
   const renderProductCard = (product) => (
     <Card key={product.product_id} className="product-card overflow-hidden border border-[#E2E8F0]">
-      <div className="cursor-pointer" onClick={() => navigate(`/product/${product.product_id}`)}>
+      <div className="cursor-pointer" onClick={() => navigate(`/product/ر.ع {product.product_id}`)}>
         <div className="aspect-square overflow-hidden bg-[#F8F9FA]">
           <img src={product.images?.[0] || PLACEHOLDER_IMAGE} alt={product.name}
             className="w-full h-full object-cover" onError={handleImageError} />
@@ -80,7 +80,7 @@ const Shop = () => {
           <h3 className="font-medium text-lg mb-1 line-clamp-1">{product.name}</h3>
           <p className="text-sm text-[#475569] mb-2 line-clamp-2">{product.description}</p>
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-bold text-[#4338CA]">${product.price.toFixed(2)}</span>
+            <span className="text-2xl font-bold text-[#4338CA]">ر.ع {product.price.toFixed(2)}</span>
             <span className="text-sm text-[#475569]">{product.stock} متوفر</span>
           </div>
         </CardContent>

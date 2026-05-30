@@ -462,6 +462,11 @@ async def create_store(
     if user["role"] != "merchant":
         raise HTTPException(status_code=403, detail="فقط التجار يمكنهم إنشاء متاجر")
 
+    # تحقق إن التاجر ما عنده متجر بالفعل
+    existing_store = await db.stores.find_one({"merchant_id": user["user_id"]})
+    if existing_store:
+        raise HTTPException(status_code=400, detail="لديك متجر بالفعل. يمكن لكل تاجر إنشاء متجر واحد فقط.")
+
     store_id = f"store_{uuid.uuid4().hex[:12]}"
     store = Store(
         store_id=store_id,
@@ -907,9 +912,23 @@ async def get_deliveries(authorization: Optional[str] = Header(None), request: R
         orders = await db.orders.find({"driver_id": driver["driver_id"]}, {"_id": 0}).to_list(1000)
     else:
         orders = await db.orders.find(
-            {"status": {"$in": ["confirmed", "shipped"]}},
+            {"payment_status": "paid", "status": {"$in": ["confirmed", "shipped"]}},
             {"_id": 0}
         ).to_list(1000)
+
+    # أضف موقع التاجر لكل طلب
+    for order in orders:
+        if order.get("items"):
+            first_product = await db.products.find_one(
+                {"product_id": order["items"][0]["product_id"]}, {"_id": 0}
+            )
+            if first_product:
+                merchant = await db.users.find_one(
+                    {"user_id": first_product["merchant_id"]}, {"_id": 0}
+                )
+                if merchant and merchant.get("lat") and merchant.get("lng"):
+                    order["merchant_lat"] = merchant["lat"]
+                    order["merchant_lng"] = merchant["lng"]
 
     return orders
 
