@@ -1028,6 +1028,31 @@ async def get_order_tracking(
     }
 
 
+
+@api_router.post("/deliveries/{order_id}/accept")
+async def accept_delivery(order_id: str, authorization: Optional[str] = Header(None), request: Request = None):
+    """المندوب يقبل طلب توصيل تلقائياً"""
+    user = await get_current_user(authorization, request)
+    if user["role"] != "driver":
+        raise HTTPException(status_code=403, detail="Drivers only")
+    
+    driver = await db.delivery_drivers.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not driver:
+        raise HTTPException(status_code=404, detail="ملف المندوب غير موجود")
+    
+    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="الطلب غير موجود")
+    
+    if order.get("driver_id"):
+        raise HTTPException(status_code=400, detail="تم قبول هذا الطلب من مندوب آخر")
+    
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {"$set": {"driver_id": driver["driver_id"], "status": "shipped", "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"message": "تم قبول الطلب بنجاح"}
+
 # ==================== ADMIN ENDPOINTS ====================
 
 @api_router.get("/admin/users")
