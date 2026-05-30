@@ -59,8 +59,7 @@ const PaymentPage = () => {
       // 2) تأكيد الدفع فوراً (mock payment)
       await api.get(`/payment/status/${response.data.session_id}`);
 
-      // 3) تأكيد إضافي لضمان تغيير الحالة
-      await api.patch(`/orders/${response.data.order_id}/status`, null, { params: { status: 'confirmed' } });
+      // الطلب يتأكد تلقائياً من payment/status
 
       setStep(3);
       setLoading(false);
