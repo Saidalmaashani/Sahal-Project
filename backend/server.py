@@ -750,6 +750,18 @@ async def checkout(
             "payment_status": "pending",
             "created_at": datetime.now(timezone.utc).isoformat()
         })
+        # تأكيد الطلب فوراً في وضع التطوير
+        await db.orders.update_one(
+            {"order_id": order_id},
+            {"$set": {"payment_status": "paid", "status": "confirmed"}}
+        )
+        await db.payment_transactions.update_one(
+            {"session_id": mock_session},
+            {"$set": {"payment_status": "paid"}}
+        )
+        # معالجة مكافأة الإحالة
+        await _process_referral_reward(user["user_id"], total)
+        
         return {
             "checkout_url": f"/order-success?session_id={mock_session}",
             "session_id": mock_session,
