@@ -32,9 +32,9 @@ JWT_EXPIRES_HOURS = 24 * 7  # أسبوع
 
 STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', '')
 
-PLATFORM_FEE = 0.08   # 8% إجمالي
-ADMIN_FEE    = 0.04   # 4% للمدير
-DRIVER_FEE   = 0.04   # 4% للمندوب
+PLATFORM_FEE = 0.07   # 7% إجمالي
+ADMIN_FEE    = 0.02   # 2% للمدير
+DRIVER_FEE   = 0.05   # 5% للمندوب
 
 # Uploads directory
 UPLOAD_DIR = Path(__file__).parent / "uploads"
@@ -161,6 +161,14 @@ class Order(BaseModel):
 class CheckoutRequest(BaseModel):
     items: List[dict]
     delivery_address: str
+
+
+class UserProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
 
 
 class DeliveryDriver(BaseModel):
@@ -347,12 +355,53 @@ async def get_me(authorization: Optional[str] = Header(None), request: Request =
 
 @api_router.post("/auth/logout")
 async def logout(request: Request):
-    # حذف الـ session لو فيه
     session_id = request.headers.get("X-Session-ID") or request.cookies.get("session_id")
     if session_id:
         await db.user_sessions.delete_one({"session_id": session_id})
     return {"message": "تم تسجيل الخروج"}
 
+
+# ==================== USER PROFILE ====================
+
+@api_router.get("/users/profile")
+async def get_profile(authorization: Optional[str] = Header(None), request: Request = None):
+    """جلب الملف الشخصي للمستخدم الحالي"""
+    user = await get_current_user(authorization, request)
+    return user
+
+
+@api_router.patch("/users/profile")
+async def update_profile(
+    payload: UserProfileUpdate,
+    authorization: Optional[str] = Header(None),
+    request: Request = None
+):
+    """تحديث بيانات الملف الشخصي"""
+    user = await get_current_user(authorization, request)
+    update_data = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if not update_data:
+        return {"message": "لا يوجد تغييرات"}
+    await db.users.update_one({"user_id": user["user_id"]}, {"$set": update_data})
+    updated = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "password_hash": 0})
+    return updated
+
+
+@api_router.get("/users/orders")
+async def get_my_orders(authorization: Optional[str] = Header(None), request: Request = None):
+    """طلبات المستخدم مع تفاصيل المنتجات"""
+    user = await get_current_user(authorization, request)
+    orders = await db.orders.find(
+        {"user_id": user["user_id"]}, {"_id": 0}
+    ).sort("created_at", -1).to_list(500)
+
+    for order in orders:
+        enriched_items = []
+        for item in order.get("items", []):
+            product = await db.products.find_one({"product_id": item["product_id"]}, {"_id": 0})
+            enriched_items.append({**item, "product": product})
+        order["items"] = enriched_items
+
+    return orders
 
 
 @api_router.post("/auth/google")

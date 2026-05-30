@@ -27,9 +27,12 @@ const Cart = () => {
 
   const fetchCart = async () => {
     try {
-      const response = await api.get('/cart');
-      setCartItems(response.data);
-      if (user?.address) setDeliveryAddress(user.address);
+      const [cartRes, profileRes] = await Promise.all([
+        api.get('/cart'),
+        api.get('/users/profile')
+      ]);
+      setCartItems(cartRes.data);
+      if (profileRes.data?.address) setDeliveryAddress(profileRes.data.address);
     } catch { toast.error('فشل تحميل السلة'); }
     finally { setLoading(false); }
   };

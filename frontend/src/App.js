@@ -21,6 +21,7 @@ import DriverDashboard from './pages/DriverDashboard';
 import MerchantProfile from './pages/MerchantProfile';
 import PaymentPage from './pages/PaymentPage';
 import MyOrders from './pages/MyOrders';
+import CustomerProfile from './pages/CustomerProfile';
 
 function AppRouter() {
   return (
@@ -41,6 +42,7 @@ function AppRouter() {
       <Route path="/merchant/profile" element={<MerchantProfile />} />
       <Route path="/payment" element={<PaymentPage />} />
       <Route path="/my-orders" element={<MyOrders />} />
+      <Route path="/profile" element={<CustomerProfile />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
