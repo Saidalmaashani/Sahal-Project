@@ -27,36 +27,40 @@ const MerchantProfile = () => {
     }).catch(() => {});
   }, [user, navigate]);
 
+  const initMap = () => {
+    if (!mapRef.current || leafletMap.current || !window.L) return;
+    const L = window.L;
+    const initLat = location.lat || 23.5880;
+    const initLng = location.lng || 58.3829;
+    leafletMap.current = L.map(mapRef.current).setView([initLat, initLng], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(leafletMap.current);
+    markerRef.current = L.marker([initLat, initLng], { draggable: true }).addTo(leafletMap.current);
+    markerRef.current.on('dragend', (e) => {
+      const pos = e.target.getLatLng();
+      setLocation({ lat: pos.lat.toFixed(6), lng: pos.lng.toFixed(6) });
+    });
+    leafletMap.current.on('click', (e) => {
+      const { lat, lng } = e.latlng;
+      markerRef.current.setLatLng([lat, lng]);
+      setLocation({ lat: lat.toFixed(6), lng: lng.toFixed(6) });
+    });
+  };
+
   useEffect(() => {
-    if (!mapRef.current || leafletMap.current) return;
-
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
-
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload = () => {
-      const L = window.L;
-      const initLat = location.lat || 23.5880;
-      const initLng = location.lng || 58.3829;
-      leafletMap.current = L.map(mapRef.current).setView([initLat, initLng], 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(leafletMap.current);
-
-      markerRef.current = L.marker([initLat, initLng], { draggable: true }).addTo(leafletMap.current);
-      markerRef.current.on('dragend', (e) => {
-        const pos = e.target.getLatLng();
-        setLocation({ lat: pos.lat.toFixed(6), lng: pos.lng.toFixed(6) });
-      });
-
-      leafletMap.current.on('click', (e) => {
-        const { lat, lng } = e.latlng;
-        markerRef.current.setLatLng([lat, lng]);
-        setLocation({ lat: lat.toFixed(6), lng: lng.toFixed(6) });
-      });
-    };
-    document.head.appendChild(script);
+    if (!document.querySelector('link[href*="leaflet"]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+    }
+    if (window.L) {
+      initMap();
+    } else if (!document.querySelector('script[src*="leaflet"]')) {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = () => setTimeout(initMap, 100);
+      document.head.appendChild(script);
+    }
   }, [mapRef.current]);
 
   const detectLocation = () => {

@@ -44,21 +44,34 @@ const DriverDashboard = () => {
     fetchData();
   }, [user, navigate, authLoading]);
 
+  const initMap = () => {
+    if (!mapRef.current || leafletMap.current || !window.L) return;
+    const L = window.L;
+    leafletMap.current = L.map(mapRef.current).setView([23.5880, 58.3829], 8);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(leafletMap.current);
+  };
+
   useEffect(() => {
-    if (!mapRef.current || leafletMap.current) return;
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-    document.head.appendChild(link);
-    const script = document.createElement("script");
-    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-    script.onload = () => {
-      const L = window.L;
-      leafletMap.current = L.map(mapRef.current).setView([23.5, 57.5], 7);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(leafletMap.current);
-    };
-    document.head.appendChild(script);
-  }, [driverProfile]);
+    if (!driverProfile) return;
+
+    // تحميل CSS
+    if (!document.querySelector('link[href*="leaflet"]')) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+
+    // تحميل JS
+    if (window.L) {
+      initMap();
+    } else if (!document.querySelector('script[src*="leaflet"]')) {
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.onload = () => setTimeout(initMap, 100);
+      document.head.appendChild(script);
+    }
+  }, [driverProfile, mapRef.current]);
 
   useEffect(() => {
     if (!leafletMap.current || !window.L) return;
