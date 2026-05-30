@@ -4,7 +4,7 @@ services:
     name: sahal-backend
     runtime: python
     rootDir: backend
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install fastapi uvicorn motor pymongo[srv] pyjwt bcrypt httpx python-dotenv pydantic python-multipart
     startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
     plan: free
     envVars:
