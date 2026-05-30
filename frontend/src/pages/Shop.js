@@ -7,7 +7,7 @@ import { Input } from '../components/ui/input';
 import { Card, CardContent } from '../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { toast } from 'sonner';
-import { ShoppingCart, Search, LogOut, User, Sparkles, Gift } from 'lucide-react';
+import { ShoppingCart, Search, LogOut, User, Sparkles, Gift, Package } from 'lucide-react';
 import SupportChat from '../components/SupportChat';
 
 const PLACEHOLDER_IMAGE = 'https://images.pexels.com/photos/17938771/pexels-photo-17938771.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940';
@@ -113,6 +113,9 @@ const Shop = () => {
                 <>
                   <Button variant="outline" size="sm" onClick={() => navigate('/cart')}>
                     <ShoppingCart className="h-4 w-4 ml-2" />السلة
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => navigate('/my-orders')}>
+                    <Package className="h-4 w-4 ml-2" />طلباتي
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => navigate('/referrals')}
                     className="border-[#F97316] text-[#F97316] hover:bg-[#F97316] hover:text-white">

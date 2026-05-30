@@ -16,18 +16,14 @@ const AuthCallback = () => {
     const processCallback = async () => {
       const params = new URLSearchParams(location.search);
       const code = params.get('code');
-      const sessionId = new URLSearchParams(location.hash.substring(1)).get('session_id');
 
       try {
-        let response;
-        if (code) {
-          response = await api.post('/auth/google', { code, redirect_uri: window.location.origin + '/auth/callback' });
-        } else if (sessionId) {
-          response = await api.post('/auth/session', null, { headers: { 'X-Session-ID': sessionId } });
-        } else {
-          navigate('/login');
-          return;
-        }
+        if (!code) { navigate('/login'); return; }
+
+        const response = await api.post('/auth/google', {
+          code,
+          redirect_uri: window.location.origin + '/auth/callback'
+        });
 
         localStorage.setItem('token', response.data.token);
         setUser(response.data.user);

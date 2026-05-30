@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from './components/ui/sonner';
 import '@/App.css';
@@ -20,15 +20,9 @@ import MerchantDashboard from './pages/MerchantDashboard';
 import DriverDashboard from './pages/DriverDashboard';
 import MerchantProfile from './pages/MerchantProfile';
 import PaymentPage from './pages/PaymentPage';
+import MyOrders from './pages/MyOrders';
 
 function AppRouter() {
-  const location = useLocation();
-
-  // التحقق من OAuth callback في الـ URL fragment
-  if (location.hash?.includes('session_id=')) {
-    return <AuthCallback />;
-  }
-
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
@@ -46,6 +40,7 @@ function AppRouter() {
       <Route path="/driver/dashboard" element={<DriverDashboard />} />
       <Route path="/merchant/profile" element={<MerchantProfile />} />
       <Route path="/payment" element={<PaymentPage />} />
+      <Route path="/my-orders" element={<MyOrders />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -5,23 +5,20 @@ Backend API - FastAPI + MongoDB
 import os
 import uuid
 import logging
-import hashlib
 import secrets
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
-from pathlib import Path
 
-from fastapi import FastAPI, APIRouter, HTTPException, Header, Request, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel
 from motor.motor_asyncio import AsyncIOMotorClient
 import bcrypt as _bcrypt
 import jwt as pyjwt
+import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
-
-import httpx
 
 # ==================== CONFIG ====================
 ROOT_DIR = Path(__file__).parent
@@ -346,7 +343,6 @@ async def google_auth(request: Request):
     redirect_uri = body.get("redirect_uri")
     if not code:
         raise HTTPException(status_code=400, detail="Missing code")
-    import httpx
     async with httpx.AsyncClient() as http:
         token_resp = await http.post("https://oauth2.googleapis.com/token", data={
             "code": code,
@@ -375,6 +371,9 @@ async def google_auth(request: Request):
         )
         await db.users.insert_one(new_user.model_dump())
         user = new_user.model_dump()
+    # فحص موافقة التاجر — نفس فحص تسجيل الدخول العادي
+    if user.get("role") == "merchant" and not user.get("is_approved"):
+        raise HTTPException(status_code=403, detail="حسابك بانتظار موافقة الإدارة")
     user.pop("_id", None)
     user.pop("password_hash", None)
     token = create_jwt_token(user["user_id"], user["role"])
@@ -608,12 +607,14 @@ async def checkout(
 ):
     user = await get_current_user(authorization, request)
 
-    # احسب المجموع
+    # احسب المجموع وتحقق من المخزون
     total = 0.0
     for item in checkout_data.items:
         product = await db.products.find_one({"product_id": item["product_id"]}, {"_id": 0})
         if not product:
-            raise HTTPException(status_code=404, detail=f"Product {item['product_id']} not found")
+            raise HTTPException(status_code=404, detail=f"المنتج {item['product_id']} غير موجود")
+        if product["stock"] < item["quantity"]:
+            raise HTTPException(status_code=400, detail=f"المخزون غير كافٍ للمنتج: {product['name']}")
         total += product["price"] * item["quantity"]
 
     # أنشئ الطلب
@@ -666,6 +667,11 @@ async def checkout(
             "payment_status": "pending",
             "created_at": datetime.now(timezone.utc).isoformat()
         })
+        for item in checkout_data.items:
+            await db.products.update_one(
+                {"product_id": item["product_id"]},
+                {"$inc": {"stock": -item["quantity"]}}
+            )
         await db.cart_items.delete_many({"user_id": user["user_id"]})
         return {"checkout_url": session["url"], "session_id": session["id"], "order_id": order_id}
     else:
@@ -685,6 +691,12 @@ async def checkout(
             {"order_id": order_id},
             {"$set": {"payment_status": "paid", "status": "confirmed"}}
         )
+        # تخفيض المخزون
+        for item in checkout_data.items:
+            await db.products.update_one(
+                {"product_id": item["product_id"]},
+                {"$inc": {"stock": -item["quantity"]}}
+            )
         await db.cart_items.delete_many({"user_id": user["user_id"]})
         await _process_referral_reward(user["user_id"], total)
         return {"checkout_url": f"/order-success?session_id={mock_session}", "session_id": mock_session, "order_id": order_id}
@@ -1021,6 +1033,8 @@ async def accept_delivery(order_id: str, authorization: Optional[str] = Header(N
     
     if order.get("driver_id"):
         raise HTTPException(status_code=400, detail="تم قبول هذا الطلب من مندوب آخر")
+    if order.get("status") != "confirmed":
+        raise HTTPException(status_code=400, detail="لا يمكن قبول هذا الطلب — حالته غير مؤهلة")
     
     await db.orders.update_one(
         {"order_id": order_id},

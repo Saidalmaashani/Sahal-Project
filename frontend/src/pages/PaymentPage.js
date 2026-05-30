@@ -65,8 +65,8 @@ const PaymentPage = () => {
       setLoading(false);
 
       setTimeout(() => {
-        navigate('/shop');
-      }, 3000);
+        navigate(`/order-success?session_id=${response.data.session_id}`);
+      }, 2000);
 
     } catch (error) {
       toast.error('فشل إتمام الطلب');
