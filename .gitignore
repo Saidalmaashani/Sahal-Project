@@ -61,3 +61,4 @@ data/db/
 secrets/
 .env.txt
 backend/pydantic-core
+backend/uploads/
