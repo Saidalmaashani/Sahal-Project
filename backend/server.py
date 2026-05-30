@@ -349,6 +349,48 @@ async def logout(request: Request):
     return {"message": "تم تسجيل الخروج"}
 
 
+
+@api_router.post("/auth/google")
+async def google_auth(request: Request):
+    body = await request.json()
+    code = body.get("code")
+    redirect_uri = body.get("redirect_uri")
+    if not code:
+        raise HTTPException(status_code=400, detail="Missing code")
+    import httpx
+    async with httpx.AsyncClient() as http:
+        token_resp = await http.post("https://oauth2.googleapis.com/token", data={
+            "code": code,
+            "client_id": os.environ.get("GOOGLE_CLIENT_ID", ""),
+            "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code"
+        })
+        if token_resp.status_code != 200:
+            raise HTTPException(status_code=401, detail="Google auth failed")
+        access_token = token_resp.json().get("access_token")
+        user_resp = await http.get("https://www.googleapis.com/oauth2/v2/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"})
+        if user_resp.status_code != 200:
+            raise HTTPException(status_code=401, detail="Failed to get user info")
+        user_info = user_resp.json()
+        email = user_info.get("email", "").lower()
+        name = user_info.get("name", "مستخدم")
+    user = await db.users.find_one({"email": email})
+    if not user:
+        user_id = f"user_{uuid.uuid4().hex[:12]}"
+        new_user = User(
+            user_id=user_id, email=email, name=name, role="shopper",
+            is_approved=True, referral_code=f"SAHAL{uuid.uuid4().hex[:6].upper()}",
+            created_at=datetime.now(timezone.utc).isoformat(), auth_provider="google"
+        )
+        await db.users.insert_one(new_user.model_dump())
+        user = new_user.model_dump()
+    user.pop("_id", None)
+    user.pop("password_hash", None)
+    token = create_jwt_token(user["user_id"], user["role"])
+    return {"user": user, "token": token}
+
 @api_router.post("/auth/session")
 async def oauth_session(request: Request):
     """تبادل session_id من Emergent OAuth"""

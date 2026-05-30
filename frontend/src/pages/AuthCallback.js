@@ -13,25 +13,28 @@ const AuthCallback = () => {
     if (hasProcessed.current) return;
     hasProcessed.current = true;
 
-    const processSession = async () => {
-      const hash = location.hash;
-      const params = new URLSearchParams(hash.substring(1));
-      const sessionId = params.get('session_id');
-
-      if (!sessionId) {
-        navigate('/login');
-        return;
-      }
+    const processCallback = async () => {
+      const params = new URLSearchParams(location.search);
+      const code = params.get('code');
+      const sessionId = new URLSearchParams(location.hash.substring(1)).get('session_id');
 
       try {
-        const response = await api.post('/auth/session', null, {
-          headers: { 'X-Session-ID': sessionId }
-        });
+        let response;
+        if (code) {
+          response = await api.post('/auth/google', { code, redirect_uri: window.location.origin + '/auth/callback' });
+        } else if (sessionId) {
+          response = await api.post('/auth/session', null, { headers: { 'X-Session-ID': sessionId } });
+        } else {
+          navigate('/login');
+          return;
+        }
 
-        setUser(response.data);
-        const dest = response.data.role === 'admin' ? '/admin/dashboard'
-          : response.data.role === 'merchant' ? '/merchant/dashboard'
-          : response.data.role === 'driver' ? '/driver/dashboard' : '/shop';
+        localStorage.setItem('token', response.data.token);
+        setUser(response.data.user);
+
+        const dest = response.data.user.role === 'admin' ? '/admin/dashboard'
+          : response.data.user.role === 'merchant' ? '/merchant/dashboard'
+          : response.data.user.role === 'driver' ? '/driver/dashboard' : '/shop';
         navigate(dest);
       } catch (error) {
         console.error('Auth error:', error);
@@ -39,14 +42,14 @@ const AuthCallback = () => {
       }
     };
 
-    processSession();
+    processCallback();
   }, [location, navigate, setUser]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4338CA] mx-auto"></div>
-        <p className="mt-4 text-[#475569]">جارٍ إكمال المصادقة...</p>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: '48px', height: '48px', border: '4px solid #4338CA', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto' }}></div>
+        <p style={{ marginTop: '1rem', color: '#475569', fontFamily: 'Tajawal,sans-serif' }}>جارٍ تسجيل الدخول...</p>
       </div>
     </div>
   );
