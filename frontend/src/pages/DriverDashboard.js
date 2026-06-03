@@ -8,7 +8,7 @@ import { Label } from "../components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { toast } from "sonner";
-import { Truck, Package, ArrowRight, Navigation, MapPin, CheckCircle } from "lucide-react";
+import { Truck, Package, ArrowRight, Navigation, MapPin, CheckCircle, Phone } from "lucide-react";
 import SupportChat from "../components/SupportChat";
 import MapTrack from "../components/MapTrack";
 
@@ -38,7 +38,7 @@ const getDistance = (lat1, lng1, lat2, lng2) => {
 
 const DriverDashboard = () => {
   const navigate = useNavigate();
-  const { user, logout, loading: authLoading } = useAuth();
+  const { user, logout, setUser, loading: authLoading } = useAuth();
   const [driverProfile, setDriverProfile] = useState(null);
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +47,9 @@ const DriverDashboard = () => {
   const [sharingLocation, setSharingLocation] = useState(false);
   const [myLocation, setMyLocation] = useState(null);
   const [form, setForm] = useState({ vehicle_type: "", vehicle_number: "", license_number: "" });
+  const [showPhoneDialog, setShowPhoneDialog] = useState(false);
+  const [phoneInput, setPhoneInput] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -92,6 +95,18 @@ const DriverDashboard = () => {
       toast.success("تم التوصيل بنجاح! 🎉");
       fetchData();
     } catch (e) { toast.error(e.response?.data?.detail || "فشل"); }
+  };
+
+  const savePhone = async () => {
+    if (!phoneInput.trim()) { toast.error('أدخل رقم الهاتف'); return; }
+    setSavingPhone(true);
+    try {
+      const r = await api.patch('/users/profile', { phone: phoneInput.trim() });
+      setUser(r.data);
+      toast.success('تم حفظ رقم الهاتف!');
+      setShowPhoneDialog(false);
+    } catch { toast.error('فشل الحفظ'); }
+    finally { setSavingPhone(false); }
   };
 
   const registerDriver = async () => {
@@ -228,10 +243,23 @@ const DriverDashboard = () => {
           </Card>
         ) : (
           <>
+            {/* بانر تحذير رقم الهاتف */}
+            {!user?.phone && (
+              <div style={{ background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Phone style={{ width: '16px', height: '16px', color: '#F97316', flexShrink: 0 }} />
+                <p style={{ fontSize: '13px', color: '#92400E', margin: 0, flex: 1 }}>
+                  رقم هاتفك غير مسجل — التجار والزبائن لن يتمكنوا من التواصل معك.
+                </p>
+                <button onClick={() => { setPhoneInput(''); setShowPhoneDialog(true); }} style={{ background: '#F97316', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Tajawal,sans-serif', whiteSpace: 'nowrap' }}>
+                  أضف رقمك
+                </button>
+              </div>
+            )}
+
             {/* بطاقة المعلومات */}
             <Card className="mb-6">
               <CardContent className="p-6">
-                <div className="grid md:grid-cols-4 gap-4 items-center">
+                <div className="grid md:grid-cols-5 gap-4 items-center">
                   <div><p className="text-xs text-[#475569] mb-1">المركبة</p><p className="font-semibold">{driverProfile.vehicle_type}</p></div>
                   <div><p className="text-xs text-[#475569] mb-1">الرقم</p><p className="font-semibold" dir="ltr">{driverProfile.vehicle_number}</p></div>
                   <div>
@@ -239,6 +267,16 @@ const DriverDashboard = () => {
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${driverProfile.is_available ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                       {driverProfile.is_available ? "متاح" : "غير متاح"}
                     </span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[#475569] mb-1">رقم التواصل</p>
+                    {user?.phone ? (
+                      <p className="font-semibold text-sm" dir="ltr">{user.phone}</p>
+                    ) : (
+                      <button onClick={() => { setPhoneInput(''); setShowPhoneDialog(true); }} style={{ color: '#E11D48', fontWeight: 600, fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Tajawal,sans-serif' }}>
+                        ⚠️ أضف رقمك
+                      </button>
+                    )}
                   </div>
                   <div>
                     <Button
@@ -349,6 +387,34 @@ const DriverDashboard = () => {
           </>
         )}
       </div>
+      {/* Dialog إضافة رقم الهاتف */}
+      <Dialog open={showPhoneDialog} onOpenChange={setShowPhoneDialog}>
+        <DialogContent style={{ direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif', maxWidth: '400px' }}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Phone className="h-5 w-5 text-[#F97316]" />إضافة رقم التواصل
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-[#475569]">رقم هاتفك يُظهَر للتجار والزبائن حتى يتمكنوا من التواصل معك عند الاستلام والتوصيل.</p>
+            <div>
+              <Label>رقم الهاتف <span className="text-red-500">*</span></Label>
+              <Input
+                value={phoneInput}
+                onChange={e => setPhoneInput(e.target.value)}
+                placeholder="+968 XXXX XXXX"
+                dir="ltr"
+                type="tel"
+                autoFocus
+              />
+            </div>
+            <Button className="w-full bg-[#4338CA] hover:bg-[#3730A3]" onClick={savePhone} disabled={savingPhone}>
+              {savingPhone ? 'جارٍ الحفظ...' : 'حفظ الرقم'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <SupportChat />
     </div>
   );

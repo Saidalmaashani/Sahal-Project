@@ -102,6 +102,7 @@ class Store(BaseModel):
     merchant_id: str
     name: str
     description: Optional[str] = ""
+    logo: Optional[str] = None
     status: str = "pending"  # pending, approved, rejected
     created_at: str
 
@@ -109,6 +110,7 @@ class Store(BaseModel):
 class StoreCreate(BaseModel):
     name: str
     description: Optional[str] = ""
+    logo: Optional[str] = None
 
 
 class Product(BaseModel):
@@ -289,6 +291,10 @@ async def register(payload: UserRegister):
     # تحقق من صحة الدور
     if payload.role not in ["admin", "merchant", "shopper", "driver"]:
         raise HTTPException(status_code=400, detail="دور غير صالح")
+
+    # رقم الهاتف إجباري
+    if not payload.phone or not payload.phone.strip():
+        raise HTTPException(status_code=400, detail="رقم الهاتف مطلوب")
 
     # التجار يحتاجون موافقة الإدارة
     is_approved = payload.role != "merchant"
@@ -492,6 +498,7 @@ async def create_store(
         merchant_id=user["user_id"],
         name=payload.name,
         description=payload.description,
+        logo=payload.logo,
         status="pending",
         created_at=datetime.now(timezone.utc).isoformat()
     )

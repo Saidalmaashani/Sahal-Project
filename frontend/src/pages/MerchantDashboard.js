@@ -32,6 +32,70 @@ const getStatusArabic = (s) => ({
 
 const PLATFORM_FEE = 0.08;
 
+// ===== مكوّن رفع شعار المتجر (صورة واحدة) =====
+const StoreLogo = ({ logo, onChange }) => {
+  const inputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = async (file) => {
+    if (!file.type.startsWith('image/')) { toast.error('نوع الملف غير مدعوم'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error('الحجم يتجاوز 5MB'); return; }
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const r = await api.post('/upload/image', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      onChange(r.data.url);
+    } catch { toast.error('فشل رفع الصورة'); }
+    finally { setUploading(false); }
+  };
+
+  return (
+    <div>
+      <Label className="text-sm font-semibold">شعار المتجر</Label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '8px' }}>
+        <div
+          onClick={() => !uploading && inputRef.current?.click()}
+          style={{
+            width: '80px', height: '80px', borderRadius: '14px', flexShrink: 0,
+            border: '2px dashed #CBD5E1', background: '#F8FAFC',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', overflow: 'hidden', position: 'relative',
+            transition: 'border-color 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = '#4338CA'}
+          onMouseLeave={e => e.currentTarget.style.borderColor = '#CBD5E1'}
+        >
+          {logo ? (
+            <img src={logo} alt="شعار" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : uploading ? (
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#4338CA]"></div>
+          ) : (
+            <div style={{ textAlign: 'center' }}>
+              <Store style={{ width: '22px', height: '22px', color: '#94A3B8', margin: '0 auto 3px' }} />
+              <p style={{ fontSize: '10px', color: '#94A3B8', margin: 0 }}>اضغط لرفع</p>
+            </div>
+          )}
+          {logo && (
+            <button
+              onClick={e => { e.stopPropagation(); onChange(''); }}
+              style={{ position: 'absolute', top: '4px', left: '4px', background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <X style={{ width: '11px', height: '11px' }} />
+            </button>
+          )}
+        </div>
+        <input ref={inputRef} type="file" accept="image/*" className="hidden"
+          onChange={e => e.target.files[0] && handleFile(e.target.files[0])} />
+        <div>
+          <p style={{ fontSize: '13px', color: '#0F172A', fontWeight: 500 }}>صورة/شعار المتجر</p>
+          <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>JPEG، PNG، WebP — الحد الأقصى 5MB</p>
+          {logo && <p style={{ fontSize: '11px', color: '#10B981', marginTop: '3px' }}>✓ تم رفع الشعار</p>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ===== مكوّن رفع الصور =====
 const ImageUploader = ({ images, onChange, maxImages = 10 }) => {
   const inputRef = useRef(null);
@@ -347,7 +411,7 @@ const MerchantDashboard = () => {
   const [loading, setLoading]        = useState(true);
   const [showStoreDialog, setShowStoreDialog] = useState(false);
   const [showProductDialog, setShowProductDialog] = useState(false);
-  const [storeForm, setStoreForm]    = useState({ name: '', description: '' });
+  const [storeForm, setStoreForm]    = useState({ name: '', description: '', logo: '' });
   const [creatingStore, setCreatingStore] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [merchantLocation, setMerchantLocation] = useState(null);
@@ -383,7 +447,11 @@ const MerchantDashboard = () => {
     if (!storeForm.name.trim()) { toast.error('اسم المتجر مطلوب'); return; }
     setCreatingStore(true);
     try {
-      const r = await api.post('/stores', storeForm);
+      const r = await api.post('/stores', {
+        name: storeForm.name,
+        description: storeForm.description,
+        logo: storeForm.logo || null,
+      });
       toast.success('تم إرسال طلب إنشاء المتجر! بانتظار موافقة الإدارة');
       setShowStoreDialog(false);
       setStore(r.data);
@@ -444,7 +512,11 @@ const MerchantDashboard = () => {
 
     return (
       <div style={{ background: cfg.color, border: `1px solid ${cfg.border}`, borderRadius: '12px', padding: '16px', marginBottom: '24px', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-        <Icon style={{ width: '24px', height: '24px', color: cfg.iconColor, flexShrink: 0, marginTop: '2px' }} />
+        {store.logo ? (
+          <img src={store.logo} alt={store.name} style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', border: '2px solid #E2E8F0', flexShrink: 0 }} />
+        ) : (
+          <Icon style={{ width: '24px', height: '24px', color: cfg.iconColor, flexShrink: 0, marginTop: '2px' }} />
+        )}
         <div>
           <p style={{ fontWeight: 700, fontSize: '16px', marginBottom: '2px' }}>{store.name}</p>
           <p style={{ fontSize: '13px', color: '#475569' }}>{cfg.text}</p>
@@ -715,6 +787,10 @@ const MerchantDashboard = () => {
             <div className="p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
               يُسمح بمتجر واحد فقط لكل تاجر. سيتم مراجعة طلبك من قِبل الإدارة.
             </div>
+            <StoreLogo
+              logo={storeForm.logo}
+              onChange={url => setStoreForm(f => ({ ...f, logo: url }))}
+            />
             <div>
               <Label>اسم المتجر <span className="text-red-500">*</span></Label>
               <Input value={storeForm.name}

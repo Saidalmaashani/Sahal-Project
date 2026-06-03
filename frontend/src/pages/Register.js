@@ -15,7 +15,7 @@ const Register = () => {
   const { register }    = useAuth();
 
   const [form, setForm] = useState({
-    firstName: '', lastName: '', email: '', password: '',
+    firstName: '', lastName: '', email: '', phone: '', password: '',
     role: 'shopper', referral_code: '', showPassword: false
   });
   const [agreed, setAgreed]   = useState(true);
@@ -32,7 +32,7 @@ const Register = () => {
   // احسب نسبة إكمال النموذج
   useEffect(() => {
     if (step === 1) { setProgress(10); return; }
-    const fields = [form.firstName, form.email, form.password.length >= 8 ? form.password : ''];
+    const fields = [form.firstName, form.email, form.phone, form.password.length >= 8 ? form.password : ''];
     const filled = fields.filter(Boolean).length;
     setProgress(10 + Math.round((filled / fields.length) * 85) + (agreed ? 5 : 0));
   }, [form, step, agreed]);
@@ -49,6 +49,7 @@ const Register = () => {
     e.preventDefault();
     if (!agreed) { toast.error('يجب الموافقة على الشروط'); return; }
     if (!form.firstName.trim()) { toast.error('الاسم الأول مطلوب'); return; }
+    if (!form.phone.trim()) { toast.error('رقم الهاتف مطلوب'); return; }
     if (form.password.length < 8) { toast.error('كلمة المرور 8 أحرف على الأقل'); return; }
     setLoading(true);
     try {
@@ -56,6 +57,7 @@ const Register = () => {
         email: form.email, password: form.password,
         name: `${form.firstName} ${form.lastName}`.trim(),
         role: form.role,
+        phone: form.phone.trim(),
         referral_code: form.referral_code || undefined
       });
       toast.success('تم إنشاء الحساب!');
@@ -327,6 +329,15 @@ const Register = () => {
                     onBlur={() => setFocusedField('')} />
                 </Field>
               </div>
+
+              {/* رقم الهاتف */}
+              <Field label="رقم الهاتف *">
+                <input style={inp({ borderColor: focusedField === 'phone' ? '#4338CA' : (form.phone ? '#10B981' : '#E2E8F0'), boxShadow: focusedField === 'phone' ? '0 0 0 3px rgba(67,56,202,0.1)' : 'none' })}
+                  type="tel" value={form.phone} onChange={set('phone')}
+                  placeholder="+968 XXXX XXXX" required dir="ltr" inputMode="tel" autoComplete="tel"
+                  onFocus={() => setFocusedField('phone')}
+                  onBlur={() => setFocusedField('')} />
+              </Field>
 
               {/* البريد */}
               <Field label="البريد الإلكتروني *">

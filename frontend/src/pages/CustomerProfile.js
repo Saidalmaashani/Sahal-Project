@@ -115,6 +115,7 @@ const CustomerProfile = () => {
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error('الاسم مطلوب'); return; }
+    if (!form.phone.trim()) { toast.error('رقم الهاتف مطلوب'); return; }
     setSaving(true);
     try {
       const payload = {};
@@ -236,6 +237,17 @@ const CustomerProfile = () => {
         {/* ===== تبويب البيانات الشخصية ===== */}
         {activeTab === 'profile' && (
           <Card>
+            {!profile.phone && !editing && (
+              <div style={{ background: '#FFF7ED', borderBottom: '1px solid #FED7AA', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Phone style={{ width: '16px', height: '16px', color: '#F97316', flexShrink: 0 }} />
+                <p style={{ fontSize: '13px', color: '#92400E', margin: 0 }}>
+                  رقم هاتفك مطلوب — يستخدمه المندوب للتواصل معك عند التوصيل.{' '}
+                  <button onClick={() => setEditing(true)} style={{ color: '#F97316', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Tajawal,sans-serif', fontSize: '13px', textDecoration: 'underline' }}>
+                    أضفه الآن
+                  </button>
+                </p>
+              </div>
+            )}
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5 text-[#4338CA]" />البيانات الشخصية
@@ -268,14 +280,22 @@ const CustomerProfile = () => {
                   <p style={{ padding: '8px 0', fontSize: '15px', color: '#475569' }} dir="ltr">{profile.email}</p>
                 </div>
                 <div>
-                  <Label className="flex items-center gap-1"><Phone className="h-3 w-3" />رقم الهاتف</Label>
+                  <Label className="flex items-center gap-1">
+                    <Phone className="h-3 w-3" />رقم الهاتف <span style={{ color: '#E11D48', marginRight: '2px' }}>*</span>
+                  </Label>
                   {editing ? (
                     <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                      placeholder="+968 XXXX XXXX" dir="ltr" type="tel" />
+                      placeholder="+968 XXXX XXXX" dir="ltr" type="tel"
+                      style={{ borderColor: !form.phone ? '#E11D48' : undefined }} />
+                  ) : profile.phone ? (
+                    <p style={{ padding: '8px 0', fontSize: '15px', direction: 'ltr' }}>{profile.phone}</p>
                   ) : (
-                    <p style={{ padding: '8px 0', fontSize: '15px', direction: 'ltr' }}>
-                      {profile.phone || <span style={{ color: '#94A3B8' }}>لم يُضف بعد</span>}
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 0' }}>
+                      <span style={{ color: '#E11D48', fontSize: '13px' }}>⚠️ لم يُضف بعد</span>
+                      <button onClick={() => setEditing(true)} style={{ color: '#4338CA', fontWeight: 600, fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Tajawal,sans-serif', textDecoration: 'underline' }}>
+                        أضفه الآن
+                      </button>
+                    </div>
                   )}
                 </div>
                 <div>
