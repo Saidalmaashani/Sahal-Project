@@ -322,51 +322,9 @@ const PushPrompt = () => {
     }
   };
 
-  // إذا الإشعارات مفعّلة — أظهر أزرار صغيرة
+  // الإشعارات مفعّلة — لا نعرض شيئاً إضافياً
   if (pushStatus === 'granted') {
-    return (
-      <>
-        <div style={{
-          position: 'fixed', bottom: '20px', left: '16px',
-          zIndex: 9000, direction: 'rtl', fontFamily: 'Tajawal,sans-serif',
-          display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px',
-        }}>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <button onClick={handleQuickTest} disabled={testLoading} style={{
-              display: 'flex', alignItems: 'center', gap: '5px',
-              padding: '7px 12px', borderRadius: '20px',
-              background: '#4338CA', color: '#fff', border: 'none',
-              fontSize: '12px', fontFamily: 'Tajawal,sans-serif',
-              cursor: 'pointer', boxShadow: '0 2px 8px rgba(67,56,202,0.35)',
-              opacity: testLoading ? 0.7 : 1,
-            }}>
-              <Send style={{ width: '12px', height: '12px' }} />
-              {testLoading ? '...' : 'اختبار'}
-            </button>
-            <button onClick={() => setShowDiag(true)} style={{
-              display: 'flex', alignItems: 'center', gap: '5px',
-              padding: '7px 12px', borderRadius: '20px',
-              background: '#fff', color: '#475569', border: '1px solid #E2E8F0',
-              fontSize: '12px', fontFamily: 'Tajawal,sans-serif', cursor: 'pointer',
-            }}>
-              <Info style={{ width: '12px', height: '12px' }} />
-              تشخيص
-            </button>
-          </div>
-          {testMsg && (
-            <div style={{
-              background: '#fff', border: '1px solid #E2E8F0', borderRadius: '10px',
-              padding: '8px 12px', fontSize: '12px', maxWidth: '240px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)', color: '#0F172A',
-            }}>
-              {testMsg}
-            </div>
-          )}
-        </div>
-        {showGuide && <IOSGuide onClose={() => setShowGuide(false)} />}
-        {showDiag && <DiagnosticPanel onClose={() => setShowDiag(false)} onRefreshed={() => setPushStatus('granted')} />}
-      </>
-    );
+    return showGuide ? <IOSGuide onClose={() => setShowGuide(false)} /> : null;
   }
 
   if (!promptVisible) return null;

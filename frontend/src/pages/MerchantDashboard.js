@@ -14,9 +14,10 @@ import { toast } from 'sonner';
 import {
   Store, Package, DollarSign, ArrowRight, Plus, MapPin,
   Upload, X, ImageIcon, Info, Tag, Layers, Weight,
-  CheckCircle, Clock, AlertCircle, Trash2, Eye, Pencil
+  CheckCircle, Clock, AlertCircle, Trash2, Eye, Pencil, MessageCircle
 } from 'lucide-react';
 import SupportChat from '../components/SupportChat';
+import OrderChat from '../components/OrderChat';
 
 const CATEGORIES = [
   'إلكترونيات', 'أزياء وملابس', 'منزل وحديقة', 'رياضة ولياقة',
@@ -414,6 +415,7 @@ const MerchantDashboard = () => {
   const [storeForm, setStoreForm]    = useState({ name: '', description: '', logo: '' });
   const [creatingStore, setCreatingStore] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [chatOrder, setChatOrder] = useState(null);
   const [merchantLocation, setMerchantLocation] = useState(null);
   const [selectedImgIdx, setSelectedImgIdx] = useState(0);
   const [editProduct, setEditProduct] = useState(null);    // المنتج المراد تعديله
@@ -743,6 +745,7 @@ const MerchantDashboard = () => {
                           <TableHead>الحالة</TableHead>
                           <TableHead>الدفع</TableHead>
                           <TableHead>التاريخ</TableHead>
+                          <TableHead></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -762,6 +765,13 @@ const MerchantDashboard = () => {
                             </TableCell>
                             <TableCell className="text-xs text-[#475569]">
                               {new Date(o.created_at).toLocaleDateString('ar-OM')}
+                            </TableCell>
+                            <TableCell>
+                              <Button variant="outline" size="sm"
+                                className="h-8 px-2 border-[#7C3AED] text-[#7C3AED] hover:bg-[#F5F3FF]"
+                                onClick={() => setChatOrder(o)}>
+                                <MessageCircle className="h-3.5 w-3.5 ml-1" />محادثة
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -939,6 +949,13 @@ const MerchantDashboard = () => {
         </DialogContent>
       </Dialog>
 
+      {chatOrder && (
+        <OrderChat
+          orderId={chatOrder.order_id}
+          orderLabel={chatOrder.order_id.slice(-8)}
+          onClose={() => setChatOrder(null)}
+        />
+      )}
       <SupportChat />
     </div>
   );

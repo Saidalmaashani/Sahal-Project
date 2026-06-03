@@ -8,9 +8,10 @@ import { Label } from "../components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { toast } from "sonner";
-import { Truck, Package, ArrowRight, Navigation, MapPin, CheckCircle, Phone } from "lucide-react";
+import { Truck, Package, ArrowRight, Navigation, MapPin, CheckCircle, Phone, MessageCircle } from "lucide-react";
 import SupportChat from "../components/SupportChat";
 import MapTrack from "../components/MapTrack";
+import OrderChat from "../components/OrderChat";
 
 const getStatusArabic = (s) => ({
   pending: "قيد الانتظار",
@@ -50,6 +51,7 @@ const DriverDashboard = () => {
   const [showPhoneDialog, setShowPhoneDialog] = useState(false);
   const [phoneInput, setPhoneInput] = useState("");
   const [savingPhone, setSavingPhone] = useState(false);
+  const [chatOrder, setChatOrder] = useState(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -189,16 +191,23 @@ const DriverDashboard = () => {
           <MapPin style={{ width: "14px", height: "14px", color: "#F97316", marginTop: "2px", flexShrink: 0 }} />
           <span>{order.delivery_address}</span>
         </div>
-        {showAccept && (
-          <Button className="w-full bg-[#10B981] hover:bg-[#059669]" onClick={() => acceptDelivery(order.order_id)}>
-            <CheckCircle className="h-4 w-4 ml-2" />قبول الطلب
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {showAccept && (
+            <Button className="flex-1 bg-[#10B981] hover:bg-[#059669]" onClick={() => acceptDelivery(order.order_id)}>
+              <CheckCircle className="h-4 w-4 ml-2" />قبول الطلب
+            </Button>
+          )}
+          {!showAccept && order.status === "shipped" && (
+            <Button className="flex-1 bg-[#4338CA] hover:bg-[#3730A3]" onClick={() => completeDelivery(order.order_id)}>
+              <CheckCircle className="h-4 w-4 ml-2" />تم التوصيل ✓
+            </Button>
+          )}
+          <Button variant="outline" size="sm"
+            style={{ borderColor: '#7C3AED', color: '#7C3AED', minWidth: '80px' }}
+            onClick={() => setChatOrder(order)}>
+            <MessageCircle className="h-4 w-4 ml-1" />محادثة
           </Button>
-        )}
-        {!showAccept && order.status === "shipped" && (
-          <Button className="w-full bg-[#4338CA] hover:bg-[#3730A3]" onClick={() => completeDelivery(order.order_id)}>
-            <CheckCircle className="h-4 w-4 ml-2" />تم التوصيل ✓
-          </Button>
-        )}
+        </div>
       </div>
     );
   };
@@ -387,6 +396,14 @@ const DriverDashboard = () => {
           </>
         )}
       </div>
+      {chatOrder && (
+        <OrderChat
+          orderId={chatOrder.order_id}
+          orderLabel={chatOrder.order_id.slice(-8)}
+          onClose={() => setChatOrder(null)}
+        />
+      )}
+
       {/* Dialog إضافة رقم الهاتف */}
       <Dialog open={showPhoneDialog} onOpenChange={setShowPhoneDialog}>
         <DialogContent style={{ direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif', maxWidth: '400px' }}>

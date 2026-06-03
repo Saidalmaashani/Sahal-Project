@@ -5,8 +5,9 @@ import api from '../utils/api';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { toast } from 'sonner';
-import { ArrowRight, Package, Truck, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { ArrowRight, Package, Truck, CheckCircle, Clock, XCircle, MessageCircle } from 'lucide-react';
 import SupportChat from '../components/SupportChat';
+import OrderChat from '../components/OrderChat';
 
 const STATUS_MAP = {
   pending:   { label: 'قيد الانتظار', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
@@ -19,8 +20,9 @@ const STATUS_MAP = {
 const MyOrders = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders]     = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [chatOrder, setChatOrder] = useState(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -91,16 +93,21 @@ const MyOrders = () => {
                       </div>
                     </div>
 
-                    {(order.status === 'shipped' || order.status === 'confirmed') && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full mt-3 border-[#4338CA] text-[#4338CA]"
-                        onClick={() => navigate(`/track/${order.order_id}`)}
-                      >
-                        <Truck className="h-4 w-4 ml-2" />تتبع الطلب
-                      </Button>
-                    )}
+                    <div className="flex gap-2 mt-3">
+                      {(order.status === 'shipped' || order.status === 'confirmed') && (
+                        <Button variant="outline" size="sm" className="flex-1 border-[#4338CA] text-[#4338CA]"
+                          onClick={() => navigate(`/track/${order.order_id}`)}>
+                          <Truck className="h-4 w-4 ml-2" />تتبع الطلب
+                        </Button>
+                      )}
+                      {order.status !== 'cancelled' && (
+                        <Button variant="outline" size="sm"
+                          className={`${(order.status === 'shipped' || order.status === 'confirmed') ? '' : 'w-full'} border-[#7C3AED] text-[#7C3AED]`}
+                          onClick={() => setChatOrder(order)}>
+                          <MessageCircle className="h-4 w-4 ml-2" />محادثة
+                        </Button>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               );
@@ -108,6 +115,13 @@ const MyOrders = () => {
           </div>
         )}
       </div>
+      {chatOrder && (
+        <OrderChat
+          orderId={chatOrder.order_id}
+          orderLabel={chatOrder.order_id.slice(-8)}
+          onClose={() => setChatOrder(null)}
+        />
+      )}
       <SupportChat />
     </div>
   );

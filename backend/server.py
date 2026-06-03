@@ -1012,6 +1012,102 @@ async def get_orders(authorization: Optional[str] = Header(None), request: Reque
     return orders
 
 
+# ==================== ORDER CHAT ====================
+
+async def _order_chat_access(order_id: str, user: dict) -> dict:
+    """تحقق من صلاحية الوصول لمحادثة الطلب"""
+    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="الطلب غير موجود")
+
+    if user["role"] == "admin" or order["user_id"] == user["user_id"]:
+        return order
+
+    if user["role"] == "merchant":
+        for item in order.get("items", []):
+            prod = await db.products.find_one(
+                {"product_id": item["product_id"], "merchant_id": user["user_id"]}, {"_id": 0}
+            )
+            if prod:
+                return order
+
+    if user["role"] == "driver":
+        drv = await db.delivery_drivers.find_one({"user_id": user["user_id"]}, {"_id": 0})
+        if drv and order.get("driver_id") == drv.get("driver_id"):
+            return order
+
+    raise HTTPException(status_code=403, detail="غير مصرح")
+
+
+@api_router.post("/orders/{order_id}/messages")
+async def send_order_message(
+    order_id: str,
+    request: Request,
+    authorization: Optional[str] = Header(None),
+):
+    user = await get_current_user(authorization, request)
+    order = await _order_chat_access(order_id, user)
+
+    body = await request.json()
+    message_text = (body.get("message") or "").strip()
+    if not message_text:
+        raise HTTPException(status_code=400, detail="الرسالة فارغة")
+
+    message_id = f"msg_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc).isoformat()
+    await db.order_messages.insert_one({
+        "message_id": message_id,
+        "order_id": order_id,
+        "sender_id": user["user_id"],
+        "sender_name": user["name"],
+        "sender_role": user["role"],
+        "message": message_text,
+        "created_at": now,
+    })
+
+    # إشعار للأطراف الأخرى
+    recipients: set = set()
+    if order["user_id"] != user["user_id"]:
+        recipients.add(order["user_id"])
+    products_in_order = []
+    for item in order.get("items", []):
+        prod = await db.products.find_one({"product_id": item["product_id"]}, {"_id": 0})
+        if prod:
+            products_in_order.append(prod)
+            if prod["merchant_id"] != user["user_id"]:
+                recipients.add(prod["merchant_id"])
+    if order.get("driver_id"):
+        drv = await db.delivery_drivers.find_one({"driver_id": order["driver_id"]}, {"_id": 0})
+        if drv and drv["user_id"] != user["user_id"]:
+            recipients.add(drv["user_id"])
+
+    role_labels = {"shopper": "زبون", "merchant": "تاجر", "driver": "مندوب", "admin": "مدير"}
+    sender_label = role_labels.get(user["role"], "")
+    for rid in recipients:
+        await _create_notification(
+            rid, "new_message",
+            f"رسالة جديدة من {user['name']} ({sender_label})",
+            message_text[:80],
+            "/my-orders"
+        )
+
+    return {"message_id": message_id, "created_at": now}
+
+
+@api_router.get("/orders/{order_id}/messages")
+async def get_order_messages(
+    order_id: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None,
+):
+    user = await get_current_user(authorization, request)
+    await _order_chat_access(order_id, user)
+    messages = await db.order_messages.find(
+        {"order_id": order_id}, {"_id": 0}
+    ).sort("created_at", 1).to_list(500)
+    return messages
+
+
 @api_router.patch("/orders/{order_id}/status")
 async def update_order_status(
     order_id: str,
