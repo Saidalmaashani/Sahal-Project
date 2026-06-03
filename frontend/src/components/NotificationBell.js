@@ -3,8 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import {
   Bell, CheckCheck, Trash2, Package, Truck, CheckCircle,
-  Store, Gift, ShoppingBag, X, AlertCircle
+  Store, Gift, ShoppingBag, X, AlertCircle, BellOff, BellRing
 } from 'lucide-react';
+import {
+  isPushSupported, getPushPermission, getActiveSubscription,
+  requestAndSubscribe, unsubscribeFromPush,
+} from '../utils/pushNotifications';
 
 const TYPE_CONFIG = {
   order_confirmed: { icon: CheckCircle, color: '#10B981', bg: '#ECFDF5', label: 'طلب مؤكد' },
@@ -31,6 +35,8 @@ const NotificationBell = () => {
   const [notifs, setNotifs]     = useState([]);
   const [unread, setUnread]     = useState(0);
   const [loading, setLoading]   = useState(false);
+  const [pushStatus, setPushStatus] = useState('default'); // 'default'|'granted'|'denied'|'unsupported'
+  const [pushLoading, setPushLoading] = useState(false);
   const panelRef = useRef(null);
   const pollRef  = useRef(null);
 
@@ -47,6 +53,37 @@ const NotificationBell = () => {
     pollRef.current = setInterval(fetchNotifs, 30000);
     return () => clearInterval(pollRef.current);
   }, [fetchNotifs]);
+
+  // تحقق من حالة Push عند الفتح
+  useEffect(() => {
+    if (!isPushSupported()) { setPushStatus('unsupported'); return; }
+    const perm = getPushPermission();
+    if (perm === 'granted') {
+      getActiveSubscription().then(sub => {
+        setPushStatus(sub ? 'granted' : 'default');
+      });
+    } else {
+      setPushStatus(perm);
+    }
+  }, []);
+
+  const handlePushToggle = async () => {
+    if (pushLoading) return;
+    setPushLoading(true);
+    try {
+      if (pushStatus === 'granted') {
+        await unsubscribeFromPush();
+        setPushStatus('default');
+      } else {
+        const result = await requestAndSubscribe();
+        setPushStatus(result);
+      }
+    } catch (e) {
+      console.error('Push toggle error:', e);
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   // إغلاق عند الضغط خارج الـ panel
   useEffect(() => {
@@ -155,6 +192,49 @@ const NotificationBell = () => {
               </button>
             </div>
           </div>
+
+          {/* شريط تفعيل إشعارات الجهاز */}
+          {pushStatus !== 'unsupported' && pushStatus !== 'denied' && (
+            <div style={{
+              padding: '10px 16px',
+              borderBottom: '1px solid #F1F5F9',
+              background: pushStatus === 'granted' ? '#F0FDF4' : '#FFF7ED',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                {pushStatus === 'granted'
+                  ? <BellRing style={{ width: 15, height: 15, color: '#10B981' }} />
+                  : <BellOff style={{ width: 15, height: 15, color: '#F97316' }} />
+                }
+                <span style={{ fontSize: '12px', color: pushStatus === 'granted' ? '#065F46' : '#92400E', fontWeight: 500 }}>
+                  {pushStatus === 'granted' ? 'إشعارات الجهاز مفعّلة ✓' : 'فعّل إشعارات الجهاز'}
+                </span>
+              </div>
+              <button
+                onClick={handlePushToggle}
+                disabled={pushLoading}
+                style={{
+                  padding: '4px 12px', border: 'none', borderRadius: '20px', cursor: 'pointer',
+                  fontSize: '11px', fontFamily: 'Tajawal,sans-serif', fontWeight: 700,
+                  background: pushStatus === 'granted' ? '#DCFCE7' : '#4338CA',
+                  color: pushStatus === 'granted' ? '#065F46' : '#fff',
+                  opacity: pushLoading ? 0.7 : 1,
+                  transition: 'all 0.2s',
+                }}
+              >
+                {pushLoading ? '...' : pushStatus === 'granted' ? 'إيقاف' : 'تفعيل'}
+              </button>
+            </div>
+          )}
+
+          {/* رسالة إذا رُفض الإذن */}
+          {pushStatus === 'denied' && (
+            <div style={{ padding: '10px 16px', background: '#FFF1F2', borderBottom: '1px solid #FECDD3' }}>
+              <p style={{ fontSize: '11px', color: '#9F1239', margin: 0 }}>
+                ⚠️ الإشعارات محظورة في إعدادات المتصفح. افتح الإعدادات للسماح بها.
+              </p>
+            </div>
+          )}
 
           {/* قائمة الإشعارات */}
           <div style={{ maxHeight: '380px', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>

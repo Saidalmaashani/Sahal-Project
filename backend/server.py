@@ -32,6 +32,24 @@ JWT_EXPIRES_HOURS = 24 * 7  # أسبوع
 
 STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', '')
 
+# VAPID keys for Web Push Notifications
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
+VAPID_PUBLIC_KEY  = os.environ.get('VAPID_PUBLIC_KEY', '')
+VAPID_EMAIL       = os.environ.get('VAPID_EMAIL', 'mailto:admin@sahal.com')
+
+# إذا لم تكن المفاتيح موجودة، نولّدها تلقائياً (للتطوير فقط)
+if not VAPID_PRIVATE_KEY:
+    try:
+        from py_vapid import Vapid
+        _v = Vapid()
+        _v.generate_keys()
+        VAPID_PRIVATE_KEY = _v.private_pem().decode()
+        VAPID_PUBLIC_KEY  = _v.public_key
+        logger.warning("VAPID keys auto-generated. Set VAPID_PRIVATE_KEY and VAPID_PUBLIC_KEY in env for production!")
+        logger.info(f"VAPID_PUBLIC_KEY={VAPID_PUBLIC_KEY}")
+    except Exception as _e:
+        logger.warning(f"Could not generate VAPID keys: {_e}. Push notifications disabled.")
+
 PLATFORM_FEE = 0.07   # 7% إجمالي
 ADMIN_FEE    = 0.02   # 2% للمدير
 DRIVER_FEE   = 0.05   # 5% للمندوب
@@ -939,7 +957,7 @@ async def get_payment_status(session_id: str):
 
 
 async def _create_notification(user_id: str, notif_type: str, title: str, message: str, link: str = None):
-    """إنشاء إشعار لمستخدم"""
+    """إنشاء إشعار لمستخدم + إرسال Web Push تلقائياً"""
     await db.notifications.insert_one({
         "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
         "user_id": user_id,
@@ -950,6 +968,8 @@ async def _create_notification(user_id: str, notif_type: str, title: str, messag
         "link": link,
         "created_at": datetime.now(timezone.utc).isoformat()
     })
+    # إرسال Web Push إذا كان المستخدم مشتركاً
+    await _send_push_to_user(user_id, title, message, link or "/")
 
 
 async def _process_referral_reward(user_id: str, amount: float):
@@ -1568,6 +1588,88 @@ async def upload_image(
 
     base_url = str(request.base_url).rstrip("/")
     return {"url": f"{base_url}/uploads/{filename}"}
+
+
+# ==================== WEB PUSH NOTIFICATIONS ====================
+
+async def _send_push_to_user(user_id: str, title: str, body: str, url: str = "/"):
+    """إرسال Web Push لكل اشتراكات المستخدم"""
+    if not VAPID_PRIVATE_KEY:
+        return
+    try:
+        from pywebpush import webpush, WebPushException
+        import json as _json
+        subs = await db.push_subscriptions.find({"user_id": user_id}, {"_id": 0}).to_list(20)
+        payload = _json.dumps({"title": title, "body": body, "url": url})
+        for sub in subs:
+            try:
+                webpush(
+                    subscription_info=sub["subscription"],
+                    data=payload,
+                    vapid_private_key=VAPID_PRIVATE_KEY,
+                    vapid_claims={"sub": VAPID_EMAIL},
+                )
+            except Exception as exc:
+                # اشتراك منتهي الصلاحية — نحذفه
+                if hasattr(exc, 'response') and exc.response and exc.response.status_code in (404, 410):
+                    await db.push_subscriptions.delete_one({"sub_id": sub.get("sub_id")})
+                else:
+                    logger.warning(f"Push send error: {exc}")
+    except ImportError:
+        logger.warning("pywebpush not installed")
+    except Exception as e:
+        logger.error(f"Push error: {e}")
+
+
+@api_router.get("/push/vapid-key")
+async def get_vapid_key():
+    """إعادة المفتاح العام للـ VAPID"""
+    if not VAPID_PUBLIC_KEY:
+        raise HTTPException(status_code=503, detail="Push notifications not configured")
+    return {"public_key": VAPID_PUBLIC_KEY}
+
+
+@api_router.post("/push/subscribe")
+async def push_subscribe(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+):
+    """حفظ اشتراك Push للمستخدم الحالي"""
+    user = await get_current_user(authorization, request)
+    body = await request.json()
+    subscription = body.get("subscription")
+    if not subscription or not subscription.get("endpoint"):
+        raise HTTPException(status_code=400, detail="Invalid subscription")
+
+    endpoint = subscription["endpoint"]
+    # تحديث أو إنشاء
+    await db.push_subscriptions.update_one(
+        {"user_id": user["user_id"], "subscription.endpoint": endpoint},
+        {"$set": {
+            "sub_id": f"sub_{uuid.uuid4().hex[:12]}",
+            "user_id": user["user_id"],
+            "subscription": subscription,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }},
+        upsert=True,
+    )
+    return {"message": "subscribed"}
+
+
+@api_router.delete("/push/unsubscribe")
+async def push_unsubscribe(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+):
+    """إلغاء اشتراك Push"""
+    user = await get_current_user(authorization, request)
+    body = await request.json()
+    endpoint = body.get("endpoint")
+    if endpoint:
+        await db.push_subscriptions.delete_one({"user_id": user["user_id"], "subscription.endpoint": endpoint})
+    else:
+        await db.push_subscriptions.delete_many({"user_id": user["user_id"]})
+    return {"message": "unsubscribed"}
 
 
 # ==================== SEED ====================

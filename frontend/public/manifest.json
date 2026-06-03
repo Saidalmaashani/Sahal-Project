@@ -1,0 +1,21 @@
+{
+  "name": "سهل - منصة التجارة الإلكترونية",
+  "short_name": "سهل",
+  "description": "منصة تجارة إلكترونية متكاملة بالعربية",
+  "start_url": "/shop",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4338CA",
+  "orientation": "portrait",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    { "src": "/logo192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/logo512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "categories": ["shopping", "business"],
+  "shortcuts": [
+    { "name": "تسوق الآن", "url": "/shop", "description": "تصفح المنتجات" },
+    { "name": "طلباتي",   "url": "/my-orders", "description": "تتبع طلباتك" }
+  ]
+}

@@ -21,3 +21,6 @@ python-multipart==0.0.9
 
 # Data Validation
 pydantic==2.9.2
+
+# Web Push Notifications
+pywebpush==2.0.0
