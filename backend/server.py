@@ -1666,6 +1666,44 @@ async def push_subscribe(
     return {"message": "subscribed"}
 
 
+@api_router.post("/push/test")
+async def push_test(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+):
+    """إرسال إشعار اختبار للمستخدم الحالي"""
+    user = await get_current_user(authorization, request)
+    subs_count = await db.push_subscriptions.count_documents({"user_id": user["user_id"]})
+    if subs_count == 0:
+        raise HTTPException(status_code=404, detail=f"لا يوجد اشتراك Push لهذا المستخدم ({user['user_id']})")
+    await _send_push_to_user(
+        user["user_id"],
+        "اختبار سهل 🔔",
+        f"مرحباً {user['name']}! الإشعارات تعمل بشكل صحيح ✅",
+        "/shop"
+    )
+    return {"message": "Push sent", "subscriptions": subs_count}
+
+
+@api_router.get("/push/status")
+async def push_status(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+):
+    """حالة Push للمستخدم الحالي"""
+    user = await get_current_user(authorization, request)
+    subs = await db.push_subscriptions.find(
+        {"user_id": user["user_id"]}, {"_id": 0, "subscription.keys": 0}
+    ).to_list(10)
+    return {
+        "user_id": user["user_id"],
+        "subscriptions_count": len(subs),
+        "vapid_configured": bool(VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY),
+        "vapid_public_key_preview": VAPID_PUBLIC_KEY[:20] + "..." if VAPID_PUBLIC_KEY else None,
+        "subscriptions": [{"endpoint_preview": s["subscription"]["endpoint"][:60] + "...", "updated_at": s.get("updated_at")} for s in subs]
+    }
+
+
 @api_router.delete("/push/unsubscribe")
 async def push_unsubscribe(
     request: Request,

@@ -1,34 +1,25 @@
 // Service Worker — سهل Web Push
-const CACHE_NAME = 'sahal-v1';
+// iOS 16.4+ compatible
 
-// استقبال إشعار Push
 self.addEventListener('push', (event) => {
-  if (!event.data) return;
-
-  let data;
-  try {
-    data = event.data.json();
-  } catch {
-    data = { title: 'سهل', body: event.data.text(), url: '/' };
+  // لا تتجاهل حتى لو البيانات فارغة
+  let data = {};
+  if (event.data) {
+    try { data = event.data.json(); }
+    catch { data = { title: 'سهل', body: event.data.text() }; }
   }
 
   const title = data.title || 'سهل';
+
+  // iOS Safari: أبسط options ممكنة (لا badge, لا vibrate, لا actions, لا image)
   const options = {
     body: data.body || '',
     icon: '/logo192.png',
-    badge: '/logo72.png',
-    image: data.image || undefined,
-    data: { url: data.url || '/' },
+    data: { url: data.url || '/shop' },
+    tag: 'sahal-' + (data.tag || Date.now()),
+    // dir و lang مهمين للعربية
     dir: 'rtl',
     lang: 'ar',
-    vibrate: [200, 100, 200],
-    requireInteraction: false,
-    tag: data.tag || 'sahal-notif',
-    renotify: true,
-    actions: data.url ? [
-      { action: 'open', title: 'فتح التطبيق' },
-      { action: 'close', title: 'إغلاق' },
-    ] : [],
   };
 
   event.waitUntil(
@@ -40,33 +31,24 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  if (event.action === 'close') return;
-
-  const targetUrl = event.notification.data?.url || '/';
+  const targetUrl = event.notification.data?.url || '/shop';
   const origin = self.location.origin;
   const fullUrl = targetUrl.startsWith('http') ? targetUrl : origin + targetUrl;
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // إذا كان التطبيق مفتوحاً بالفعل
-      for (const client of windowClients) {
-        if (client.url.startsWith(origin)) {
-          client.focus();
-          client.navigate(fullUrl);
-          return;
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((list) => {
+        for (const client of list) {
+          if (client.url.startsWith(origin) && 'focus' in client) {
+            client.focus();
+            if ('navigate' in client) client.navigate(fullUrl);
+            return;
+          }
         }
-      }
-      // افتح نافذة جديدة
-      return clients.openWindow(fullUrl);
-    })
+        return clients.openWindow(fullUrl);
+      })
   );
 });
 
-// تثبيت Service Worker
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
-});
+self.addEventListener('install', () => { self.skipWaiting(); });
+self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
