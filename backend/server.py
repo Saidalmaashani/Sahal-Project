@@ -605,8 +605,8 @@ async def create_product(
 
 @api_router.get("/products")
 async def list_products(category: Optional[str] = None, search: Optional[str] = None):
-    """قائمة المنتجات العامة"""
-    query = {}
+    """قائمة المنتجات العامة — يُخفي المنتجات المنفدة تلقائياً"""
+    query = {"stock": {"$gt": 0}}
     if category and category != "all":
         query["category"] = category
     if search:
@@ -634,8 +634,8 @@ async def get_recommendations(
     """توصيات مدعومة بـ AI - حالياً ترجع منتجات عشوائية شائعة"""
     user = await get_current_user(authorization, request)
 
-    # نسخة بسيطة: أحدث 8 منتجات
-    products = await db.products.find({}, {"_id": 0}).sort("created_at", -1).limit(8).to_list(8)
+    # أحدث 8 منتجات متوفرة فقط
+    products = await db.products.find({"stock": {"$gt": 0}}, {"_id": 0}).sort("created_at", -1).limit(8).to_list(8)
     return products
 
 
