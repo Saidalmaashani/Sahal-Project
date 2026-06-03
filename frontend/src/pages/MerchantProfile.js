@@ -32,7 +32,7 @@ const MerchantProfile = () => {
     const L = window.L;
     const initLat = location.lat || 23.5880;
     const initLng = location.lng || 58.3829;
-    leafletMap.current = L.map(mapRef.current).setView([initLat, initLng], 12);
+    leafletMap.current = L.map(mapRef.current, { tap: false, dragging: true, touchZoom: true, scrollWheelZoom: false }).setView([initLat, initLng], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(leafletMap.current);
     markerRef.current = L.marker([initLat, initLng], { draggable: true }).addTo(leafletMap.current);
     markerRef.current.on('dragend', (e) => {
