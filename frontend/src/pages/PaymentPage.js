@@ -13,7 +13,7 @@ const PaymentPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { items, deliveryAddress, total } = location.state || {};
+  const { items, deliveryAddress, deliveryLocation, total } = location.state || {};
   const [step, setStep] = useState(1); // 1=تفاصيل، 2=معالجة، 3=نجاح
   const [cardData, setCardData] = useState({
     number: '', name: '', expiry: '', cvv: ''
@@ -53,7 +53,9 @@ const PaymentPage = () => {
       // 1) أنشئ الطلب
       const response = await api.post('/checkout', {
         items,
-        delivery_address: deliveryAddress
+        delivery_address: deliveryAddress,
+        delivery_lat: deliveryLocation?.lat || null,
+        delivery_lng: deliveryLocation?.lng || null,
       });
 
       // 2) تأكيد الدفع فوراً (mock payment)

@@ -153,6 +153,8 @@ class Order(BaseModel):
     status: str = "pending"  # pending, confirmed, shipped, delivered, cancelled
     payment_status: str = "pending"  # pending, paid, failed
     delivery_address: str
+    delivery_lat: Optional[float] = None
+    delivery_lng: Optional[float] = None
     driver_id: Optional[str] = None
     created_at: str
     updated_at: str
@@ -161,6 +163,8 @@ class Order(BaseModel):
 class CheckoutRequest(BaseModel):
     items: List[dict]
     delivery_address: str
+    delivery_lat: Optional[float] = None
+    delivery_lng: Optional[float] = None
 
 
 class UserProfileUpdate(BaseModel):
@@ -621,6 +625,67 @@ async def get_recommendations(
     return products
 
 
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None   # merchant_price
+    stock: Optional[int] = None
+    category: Optional[str] = None
+    brand: Optional[str] = None
+    sku: Optional[str] = None
+    weight: Optional[float] = None
+    images: Optional[List[str]] = None
+
+
+@api_router.patch("/products/{product_id}")
+async def update_product(
+    product_id: str,
+    payload: ProductUpdate,
+    authorization: Optional[str] = Header(None),
+    request: Request = None
+):
+    user = await get_current_user(authorization, request)
+    product = await db.products.find_one({"product_id": product_id}, {"_id": 0})
+    if not product:
+        raise HTTPException(status_code=404, detail="المنتج غير موجود")
+    if product["merchant_id"] != user["user_id"]:
+        raise HTTPException(status_code=403, detail="ليس لديك صلاحية تعديل هذا المنتج")
+
+    update_data = {k: v for k, v in payload.model_dump().items() if v is not None}
+
+    # إعادة حساب الأسعار إذا تغير السعر
+    if "price" in update_data:
+        merchant_price = round(update_data["price"], 3)
+        update_data["merchant_price"] = merchant_price
+        update_data["price"] = round(merchant_price * (1 + PLATFORM_FEE), 3)
+        update_data["admin_fee"] = round(merchant_price * ADMIN_FEE, 3)
+        update_data["driver_fee"] = round(merchant_price * DRIVER_FEE, 3)
+
+    if not update_data:
+        return product
+
+    await db.products.update_one({"product_id": product_id}, {"$set": update_data})
+    updated = await db.products.find_one({"product_id": product_id}, {"_id": 0})
+    return updated
+
+
+@api_router.delete("/products/{product_id}")
+async def delete_product(
+    product_id: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None
+):
+    user = await get_current_user(authorization, request)
+    product = await db.products.find_one({"product_id": product_id}, {"_id": 0})
+    if not product:
+        raise HTTPException(status_code=404, detail="المنتج غير موجود")
+    if product["merchant_id"] != user["user_id"] and user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="ليس لديك صلاحية حذف هذا المنتج")
+
+    await db.products.delete_one({"product_id": product_id})
+    return {"message": "تم حذف المنتج"}
+
+
 @api_router.get("/products/{product_id}")
 async def get_product(product_id: str):
     product = await db.products.find_one({"product_id": product_id}, {"_id": 0})
@@ -726,6 +791,8 @@ async def checkout(
         status="pending",
         payment_status="pending",
         delivery_address=checkout_data.delivery_address,
+        delivery_lat=checkout_data.delivery_lat,
+        delivery_lng=checkout_data.delivery_lng,
         created_at=datetime.now(timezone.utc).isoformat(),
         updated_at=datetime.now(timezone.utc).isoformat()
     )
@@ -1115,6 +1182,8 @@ async def get_order_tracking(
         "order_id": order_id,
         "status": order["status"],
         "delivery_address": order["delivery_address"],
+        "delivery_lat": order.get("delivery_lat"),
+        "delivery_lng": order.get("delivery_lng"),
         "total_amount": order["total_amount"],
         "driver_location": driver_location,
         "driver_info": driver_info,

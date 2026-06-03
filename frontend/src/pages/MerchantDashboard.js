@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import {
   Store, Package, DollarSign, ArrowRight, Plus, MapPin,
   Upload, X, ImageIcon, Info, Tag, Layers, Weight,
-  CheckCircle, Clock, AlertCircle, Trash2, Eye
+  CheckCircle, Clock, AlertCircle, Trash2, Eye, Pencil
 } from 'lucide-react';
 import SupportChat from '../components/SupportChat';
 
@@ -132,11 +132,25 @@ const ImageUploader = ({ images, onChange, maxImages = 10 }) => {
   );
 };
 
-// ===== مكوّن نموذج المنتج الاحترافي =====
-const ProductForm = ({ onSuccess, onClose }) => {
-  const [form, setForm] = useState({
-    name: '', description: '', price: '', stock: '',
-    category: '', brand: '', sku: '', weight: '', images: []
+// ===== مكوّن نموذج المنتج الاحترافي (إضافة + تعديل) =====
+const ProductForm = ({ onSuccess, onClose, editProduct = null }) => {
+  const isEdit = !!editProduct;
+
+  const [form, setForm] = useState(() => {
+    if (editProduct) {
+      return {
+        name: editProduct.name || '',
+        description: editProduct.description || '',
+        price: String(editProduct.merchant_price ?? editProduct.price ?? ''),
+        stock: String(editProduct.stock ?? ''),
+        category: editProduct.category || '',
+        brand: editProduct.brand || '',
+        sku: editProduct.sku || '',
+        weight: editProduct.weight ? String(editProduct.weight) : '',
+        images: editProduct.images || [],
+      };
+    }
+    return { name: '', description: '', price: '', stock: '', category: '', brand: '', sku: '', weight: '', images: [] };
   });
   const [loading, setLoading] = useState(false);
 
@@ -148,16 +162,16 @@ const ProductForm = ({ onSuccess, onClose }) => {
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
 
   const handleSubmit = async () => {
-    if (!form.name.trim())     { toast.error('اسم المنتج مطلوب'); return; }
+    if (!form.name.trim())        { toast.error('اسم المنتج مطلوب'); return; }
     if (!form.description.trim()) { toast.error('وصف المنتج مطلوب'); return; }
     if (!form.price || merchantPrice <= 0) { toast.error('السعر يجب أن يكون أكبر من صفر'); return; }
-    if (!form.stock || parseInt(form.stock) < 0) { toast.error('الكمية غير صالحة'); return; }
-    if (!form.category) { toast.error('الفئة مطلوبة'); return; }
+    if (form.stock === '' || parseInt(form.stock) < 0) { toast.error('الكمية غير صالحة'); return; }
+    if (!form.category)           { toast.error('الفئة مطلوبة'); return; }
     if (form.images.length === 0) { toast.error('يجب إضافة صورة واحدة على الأقل'); return; }
 
     setLoading(true);
     try {
-      await api.post('/products', {
+      const payload = {
         name: form.name.trim(),
         description: form.description.trim(),
         price: merchantPrice,
@@ -166,12 +180,19 @@ const ProductForm = ({ onSuccess, onClose }) => {
         brand: form.brand.trim(),
         sku: form.sku.trim(),
         weight: form.weight ? parseFloat(form.weight) : null,
-        images: form.images
-      });
-      toast.success('تم إضافة المنتج بنجاح!');
+        images: form.images,
+      };
+
+      if (isEdit) {
+        await api.patch(`/products/${editProduct.product_id}`, payload);
+        toast.success('تم تعديل المنتج بنجاح!');
+      } else {
+        await api.post('/products', payload);
+        toast.success('تم إضافة المنتج بنجاح!');
+      }
       onSuccess();
     } catch (e) {
-      toast.error(e.response?.data?.detail || 'فشل الإضافة');
+      toast.error(e.response?.data?.detail || (isEdit ? 'فشل التعديل' : 'فشل الإضافة'));
     } finally {
       setLoading(false);
     }
@@ -292,12 +313,16 @@ const ProductForm = ({ onSuccess, onClose }) => {
         <Button variant="outline" onClick={onClose}>إلغاء</Button>
         <Button
           onClick={handleSubmit} disabled={loading}
-          style={{ background: '#4338CA', color: '#fff', minWidth: '120px' }}
+          style={{ background: isEdit ? '#F97316' : '#4338CA', color: '#fff', minWidth: '120px' }}
         >
           {loading ? (
             <span className="flex items-center gap-2">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               جارٍ الحفظ...
+            </span>
+          ) : isEdit ? (
+            <span className="flex items-center gap-2">
+              <Pencil className="h-4 w-4" />حفظ التعديلات
             </span>
           ) : (
             <span className="flex items-center gap-2">
@@ -325,6 +350,11 @@ const MerchantDashboard = () => {
   const [storeForm, setStoreForm]    = useState({ name: '', description: '' });
   const [creatingStore, setCreatingStore] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [merchantLocation, setMerchantLocation] = useState(null);
+  const [selectedImgIdx, setSelectedImgIdx] = useState(0);
+  const [editProduct, setEditProduct] = useState(null);    // المنتج المراد تعديله
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     if (!user || user.role !== 'merchant') { navigate('/shop'); return; }
@@ -333,16 +363,18 @@ const MerchantDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [a, s, p, o] = await Promise.all([
+      const [a, s, p, o, loc] = await Promise.all([
         api.get('/admin/analytics'),
         api.get('/stores/my'),
         api.get('/products/my'),
-        api.get('/orders')
+        api.get('/orders'),
+        api.get('/merchants/profile').catch(() => ({ data: {} })),
       ]);
       setAnalytics(a.data);
       setStore(s.data[0] || null);   // متجر واحد فقط
       setProducts(p.data);
       setOrders(o.data);
+      setMerchantLocation(loc.data?.lat ? loc.data : null);
     } catch { toast.error('فشل التحميل'); }
     finally { setLoading(false); setStoreLoading(false); }
   };
@@ -357,6 +389,27 @@ const MerchantDashboard = () => {
       setStore(r.data);
     } catch (e) { toast.error(e.response?.data?.detail || 'فشل'); }
     finally { setCreatingStore(false); }
+  };
+
+  const handleDeleteProduct = async (productId, e) => {
+    e.stopPropagation();
+    if (!window.confirm('هل أنت متأكد من حذف هذا المنتج؟')) return;
+    setDeletingId(productId);
+    try {
+      await api.delete(`/products/${productId}`);
+      toast.success('تم حذف المنتج');
+      fetchData();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'فشل الحذف');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleEditProduct = (product, e) => {
+    e.stopPropagation();
+    setEditProduct(product);
+    setShowEditDialog(true);
   };
 
   if (loading) return (
@@ -398,8 +451,14 @@ const MerchantDashboard = () => {
           {store.description && <p style={{ fontSize: '12px', color: '#94A3B8', marginTop: '4px' }}>{store.description}</p>}
         </div>
         {store.status === 'approved' && (
-          <Button variant="outline" size="sm" className="mr-auto" onClick={() => navigate('/merchant/profile')}>
-            <MapPin className="h-3 w-3 ml-1" />موقع المتجر
+          <Button
+            variant={merchantLocation ? "outline" : "default"}
+            size="sm"
+            className={`mr-auto ${!merchantLocation ? 'bg-[#E11D48] hover:bg-[#BE123C] text-white' : ''}`}
+            onClick={() => navigate('/merchant/profile')}
+          >
+            <MapPin className="h-3 w-3 ml-1" />
+            {merchantLocation ? 'موقع المتجر ✓' : '⚠️ حدد موقع المتجر (مطلوب)'}
           </Button>
         )}
       </div>
@@ -476,7 +535,17 @@ const MerchantDashboard = () => {
                     <Package className="h-5 w-5 text-[#4338CA]" />منتجاتي
                   </CardTitle>
                   {hasApprovedStore && (
-                    <Button className="bg-[#F97316] hover:bg-[#EA580C]" onClick={() => setShowProductDialog(true)}>
+                    <Button
+                      className={merchantLocation ? "bg-[#F97316] hover:bg-[#EA580C]" : "bg-gray-400 cursor-not-allowed"}
+                      onClick={() => {
+                        if (!merchantLocation) {
+                          toast.error('يجب تحديد موقع المتجر أولاً قبل إضافة المنتجات');
+                          navigate('/merchant/profile');
+                        } else {
+                          setShowProductDialog(true);
+                        }
+                      }}
+                    >
                       <Plus className="h-4 w-4 ml-2" />إضافة منتج
                     </Button>
                   )}
@@ -486,6 +555,15 @@ const MerchantDashboard = () => {
                     <div className="text-center py-10 text-[#475569]">
                       <Clock className="h-12 w-12 mx-auto mb-3 opacity-30" />
                       <p>بانتظار اعتماد المتجر لتتمكن من إضافة المنتجات</p>
+                    </div>
+                  ) : !merchantLocation ? (
+                    <div className="text-center py-10">
+                      <MapPin className="h-12 w-12 mx-auto mb-3 text-[#E11D48] opacity-50" />
+                      <p className="font-semibold text-[#0F172A] mb-2">يجب تحديد موقع المتجر أولاً</p>
+                      <p className="text-[#475569] text-sm mb-4">لا يمكن إضافة منتجات حتى تحدد موقع متجرك</p>
+                      <Button className="bg-[#4338CA] hover:bg-[#3730A3]" onClick={() => navigate('/merchant/profile')}>
+                        <MapPin className="h-4 w-4 ml-2" />تحديد موقع المتجر
+                      </Button>
                     </div>
                   ) : products.length === 0 ? (
                     <div className="text-center py-10">
@@ -506,17 +584,25 @@ const MerchantDashboard = () => {
                             <TableHead>سعرك</TableHead>
                             <TableHead>سعر العميل</TableHead>
                             <TableHead>المخزون</TableHead>
+                            <TableHead>إجراءات</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {products.map(p => (
-                            <TableRow key={p.product_id} className="cursor-pointer hover:bg-[#F8F9FA]"
-                              onClick={() => setSelectedProduct(p)}>
+                            <TableRow key={p.product_id} className="hover:bg-[#F8F9FA] cursor-pointer"
+                              onClick={() => { setSelectedProduct(p); setSelectedImgIdx(0); }}>
                               <TableCell>
                                 {p.images?.[0] ? (
-                                  <img src={p.images[0]} alt={p.name}
-                                    style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #E2E8F0' }}
-                                    onError={e => { e.target.style.display = 'none'; }} />
+                                  <div style={{ position: 'relative', width: '48px', height: '48px' }}>
+                                    <img src={p.images[0]} alt={p.name}
+                                      style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #E2E8F0' }}
+                                      onError={e => { e.target.style.display = 'none'; }} />
+                                    {p.images.length > 1 && (
+                                      <span style={{ position: 'absolute', bottom: '-4px', left: '-4px', background: '#4338CA', color: '#fff', fontSize: '9px', padding: '1px 4px', borderRadius: '6px', fontWeight: 600 }}>
+                                        +{p.images.length - 1}
+                                      </span>
+                                    )}
+                                  </div>
                                 ) : (
                                   <div style={{ width: '48px', height: '48px', background: '#F1F5F9', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <ImageIcon style={{ width: '20px', height: '20px', color: '#94A3B8' }} />
@@ -534,6 +620,30 @@ const MerchantDashboard = () => {
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.stock > 5 ? 'bg-green-100 text-green-800' : p.stock > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
                                   {p.stock > 0 ? `${p.stock} قطعة` : 'نفذ'}
                                 </span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                                  <Button
+                                    variant="outline" size="sm"
+                                    className="h-8 w-8 p-0 border-[#4338CA] text-[#4338CA] hover:bg-[#EEF2FF]"
+                                    title="تعديل"
+                                    onClick={(e) => handleEditProduct(p, e)}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="outline" size="sm"
+                                    className="h-8 w-8 p-0 border-red-300 text-red-500 hover:bg-red-50"
+                                    title="حذف"
+                                    disabled={deletingId === p.product_id}
+                                    onClick={(e) => handleDeleteProduct(p.product_id, e)}
+                                  >
+                                    {deletingId === p.product_id
+                                      ? <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-500"></div>
+                                      : <Trash2 className="h-3.5 w-3.5" />
+                                    }
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -645,45 +755,112 @@ const MerchantDashboard = () => {
       </Dialog>
 
       {/* Dialog تفاصيل المنتج */}
-      <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
-        {selectedProduct && (
-          <DialogContent style={{ direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif', maxWidth: '600px' }}>
-            <DialogHeader>
-              <DialogTitle>{selectedProduct.name}</DialogTitle>
-            </DialogHeader>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div>
-                {selectedProduct.images?.[0] ? (
-                  <img src={selectedProduct.images[0]} alt={selectedProduct.name}
-                    style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '10px' }} />
-                ) : (
-                  <div style={{ width: '100%', aspectRatio: '1', background: '#F1F5F9', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <ImageIcon style={{ width: '48px', height: '48px', color: '#94A3B8' }} />
+      <Dialog open={!!selectedProduct} onOpenChange={() => { setSelectedProduct(null); setSelectedImgIdx(0); }}>
+        {selectedProduct && (() => {
+          const imgs = selectedProduct.images?.length ? selectedProduct.images : [];
+          return (
+            <DialogContent style={{ direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif', maxWidth: '640px' }}>
+              <DialogHeader>
+                <DialogTitle>{selectedProduct.name}</DialogTitle>
+              </DialogHeader>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {/* قسم الصور */}
+                <div>
+                  {/* الصورة الرئيسية */}
+                  <div style={{ width: '100%', aspectRatio: '1', background: '#F1F5F9', borderRadius: '12px', overflow: 'hidden', border: '1px solid #E2E8F0' }}>
+                    {imgs.length > 0 ? (
+                      <img
+                        src={imgs[selectedImgIdx]}
+                        alt={selectedProduct.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={e => { e.target.src = 'https://images.pexels.com/photos/17938771/pexels-photo-17938771.jpeg'; }}
+                      />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <ImageIcon style={{ width: '48px', height: '48px', color: '#94A3B8' }} />
+                      </div>
+                    )}
                   </div>
-                )}
-                {selectedProduct.images?.length > 1 && (
-                  <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
-                    {selectedProduct.images.slice(1).map((img, i) => (
-                      <img key={i} src={img} alt="" style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #E2E8F0' }} />
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div><p className="text-xs text-[#475569]">الفئة</p><p className="font-medium">{selectedProduct.category}</p></div>
-                {selectedProduct.brand && <div><p className="text-xs text-[#475569]">العلامة التجارية</p><p className="font-medium">{selectedProduct.brand}</p></div>}
-                <div><p className="text-xs text-[#475569]">سعرك (دخلك)</p><p className="text-xl font-bold text-[#10B981]">ر.ع {(selectedProduct.merchant_price ?? selectedProduct.price).toFixed(3)}</p></div>
-                <div><p className="text-xs text-[#475569]">سعر العميل</p><p className="text-xl font-bold text-[#4338CA]">ر.ع {selectedProduct.price.toFixed(3)}</p></div>
-                <div><p className="text-xs text-[#475569]">المخزون</p>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${selectedProduct.stock > 5 ? 'bg-green-100 text-green-800' : selectedProduct.stock > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
-                    {selectedProduct.stock} قطعة
-                  </span>
+
+                  {/* صور مصغرة قابلة للنقر */}
+                  {imgs.length > 1 && (
+                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(imgs.length, 5)}, 1fr)`, gap: '6px', marginTop: '8px' }}>
+                      {imgs.map((img, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setSelectedImgIdx(i)}
+                          style={{
+                            aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', padding: 0, cursor: 'pointer',
+                            border: selectedImgIdx === i ? '2px solid #4338CA' : '1px solid #E2E8F0',
+                            background: '#fff', transition: 'border-color 0.15s',
+                          }}
+                        >
+                          <img
+                            src={img}
+                            alt={`صورة ${i + 1}`}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={e => { e.target.style.display = 'none'; }}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {imgs.length > 0 && (
+                    <p style={{ fontSize: '11px', color: '#94A3B8', textAlign: 'center', marginTop: '4px' }}>
+                      {selectedImgIdx + 1} / {imgs.length} صورة
+                    </p>
+                  )}
                 </div>
-                <div><p className="text-xs text-[#475569]">الوصف</p><p className="text-sm text-[#475569]">{selectedProduct.description}</p></div>
+
+                {/* بيانات المنتج */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div><p className="text-xs text-[#475569]">الفئة</p><p className="font-medium">{selectedProduct.category}</p></div>
+                  {selectedProduct.brand && <div><p className="text-xs text-[#475569]">العلامة التجارية</p><p className="font-medium">{selectedProduct.brand}</p></div>}
+                  <div>
+                    <p className="text-xs text-[#475569]">سعرك (دخلك)</p>
+                    <p className="text-xl font-bold text-[#10B981]">ر.ع {(selectedProduct.merchant_price ?? selectedProduct.price).toFixed(3)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[#475569]">سعر العميل</p>
+                    <p className="text-xl font-bold text-[#4338CA]">ر.ع {selectedProduct.price.toFixed(3)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[#475569]">المخزون</p>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${selectedProduct.stock > 5 ? 'bg-green-100 text-green-800' : selectedProduct.stock > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                      {selectedProduct.stock} قطعة
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[#475569]">الوصف</p>
+                    <p className="text-sm text-[#475569] leading-relaxed">{selectedProduct.description}</p>
+                  </div>
+                  {selectedProduct.sku && (
+                    <div><p className="text-xs text-[#475569]">SKU</p><p className="text-sm font-mono">{selectedProduct.sku}</p></div>
+                  )}
+                </div>
               </div>
-            </div>
-          </DialogContent>
-        )}
+            </DialogContent>
+          );
+        })()}
+      </Dialog>
+
+      {/* Dialog تعديل المنتج */}
+      <Dialog open={showEditDialog} onOpenChange={(v) => { setShowEditDialog(v); if (!v) setEditProduct(null); }}>
+        <DialogContent style={{ direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif', maxWidth: '900px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-[#F97316]" />
+              تعديل المنتج: {editProduct?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {editProduct && (
+            <ProductForm
+              editProduct={editProduct}
+              onSuccess={() => { setShowEditDialog(false); setEditProduct(null); fetchData(); }}
+              onClose={() => { setShowEditDialog(false); setEditProduct(null); }}
+            />
+          )}
+        </DialogContent>
       </Dialog>
 
       <SupportChat />

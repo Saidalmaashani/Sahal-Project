@@ -6,13 +6,14 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { toast } from "sonner";
 import { ArrowRight, Truck, MapPin, Phone, Clock, Package, Navigation } from "lucide-react";
+import MapTrack from "../components/MapTrack";
 
 const getStatusArabic = (s) => ({
   pending: "قيد الانتظار",
   confirmed: "مؤكد - يتم التجهيز",
   shipped: "🚗 في الطريق إليك",
   delivered: "✅ تم التوصيل",
-  cancelled: "ملغى"
+  cancelled: "ملغى",
 }[s] || s);
 
 const OrderTracking = () => {
@@ -22,12 +23,6 @@ const OrderTracking = () => {
   const [tracking, setTracking] = useState(null);
   const [loading, setLoading] = useState(true);
   const pollRef = useRef(null);
-  const mapRef = useRef(null);
-  const leafletMap = useRef(null);
-  const driverMarkerRef = useRef(null);
-  const destMarkerRef = useRef(null);
-  const lineRef = useRef(null);
-  const [followDriver, setFollowDriver] = useState(true);
 
   useEffect(() => {
     if (authLoading) return;
@@ -37,102 +32,15 @@ const OrderTracking = () => {
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [orderId, user, authLoading]);
 
-  const initMap = (trackingData) => {
-    if (!mapRef.current || !window.L) return;
-
-    const L = window.L;
-    const driverLoc = trackingData.driver_location;
-    const centerLat = driverLoc?.lat || 17.0151;
-    const centerLng = driverLoc?.lng || 54.0924;
-
-    if (!leafletMap.current) {
-      leafletMap.current = L.map(mapRef.current, {
-        tap: false, dragging: true, touchZoom: true, scrollWheelZoom: false
-      }).setView([centerLat, centerLng], 13);
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap"
-      }).addTo(leafletMap.current);
-    }
-
-    // علامة المندوب
-    if (driverLoc?.lat) {
-      const driverIcon = L.divIcon({
-        html: `<div style="background:#4338CA;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:22px">🚗</div>`,
-        iconSize: [44, 44], iconAnchor: [22, 22], className: ""
-      });
-
-      if (driverMarkerRef.current) {
-        driverMarkerRef.current.setLatLng([driverLoc.lat, driverLoc.lng]);
-      } else {
-        driverMarkerRef.current = L.marker([driverLoc.lat, driverLoc.lng], { icon: driverIcon })
-          .addTo(leafletMap.current)
-          .bindPopup(`<div style="direction:rtl;font-family:Tajawal,sans-serif"><b>🚗 المندوب</b><br/>${trackingData.driver_info?.name || ""}</div>`);
-      }
-      if (followDriver) {
-        leafletMap.current.setView([driverLoc.lat, driverLoc.lng], 14);
-      }
-    }
-
-    // علامة الوجهة
-    if (trackingData.delivery_lat && trackingData.delivery_lng) {
-      const destIcon = L.divIcon({
-        html: `<div style="background:#F97316;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:22px">🏠</div>`,
-        iconSize: [44, 44], iconAnchor: [22, 44], className: ""
-      });
-
-      if (!destMarkerRef.current) {
-        destMarkerRef.current = L.marker([trackingData.delivery_lat, trackingData.delivery_lng], { icon: destIcon })
-          .addTo(leafletMap.current)
-          .bindPopup(`<div style="direction:rtl;font-family:Tajawal,sans-serif"><b>🏠 موقع التوصيل</b><br/>${trackingData.delivery_address}</div>`);
-      }
-
-      // خط بين المندوب والوجهة
-      if (driverLoc?.lat) {
-        if (lineRef.current) lineRef.current.remove();
-        lineRef.current = L.polyline([
-          [driverLoc.lat, driverLoc.lng],
-          [trackingData.delivery_lat, trackingData.delivery_lng]
-        ], { color: "#4338CA", weight: 3, dashArray: "8,8", opacity: 0.7 }).addTo(leafletMap.current);
-
-        // ضبط الخريطة لتظهر كل النقاط
-        if (followDriver) {
-          leafletMap.current.fitBounds([
-            [driverLoc.lat, driverLoc.lng],
-            [trackingData.delivery_lat, trackingData.delivery_lng]
-          ], { padding: [40, 40] });
-        }
-      }
-    }
-  };
-
-  const loadLeafletAndInit = (trackingData) => {
-    if (!document.querySelector('link[href*="leaflet"]')) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-      document.head.appendChild(link);
-    }
-    if (window.L) {
-      setTimeout(() => initMap(trackingData), 200);
-    } else if (!document.querySelector('script[src*="leaflet"]')) {
-      const script = document.createElement("script");
-      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-      script.onload = () => setTimeout(() => initMap(trackingData), 200);
-      document.head.appendChild(script);
-    } else {
-      setTimeout(() => initMap(trackingData), 500);
-    }
-  };
-
   const fetchTracking = async () => {
     try {
       const r = await api.get(`/orders/${orderId}/tracking`);
       setTracking(r.data);
-      if (mapRef.current) loadLeafletAndInit(r.data);
     } catch (e) {
       toast.error(e.response?.data?.detail || "فشل تحميل التتبع");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) return (
@@ -147,8 +55,16 @@ const OrderTracking = () => {
     </div>
   );
 
+  const driverPos = tracking.driver_location?.lat
+    ? { lat: tracking.driver_location.lat, lng: tracking.driver_location.lng }
+    : null;
+
+  const destPos = tracking.delivery_lat && tracking.delivery_lng
+    ? { lat: tracking.delivery_lat, lng: tracking.delivery_lng }
+    : null;
+
   return (
-    <div className="min-h-screen bg-[#F8F9FA]">
+    <div className="min-h-screen bg-[#F8F9FA]" style={{ direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif' }}>
       <header className="bg-white border-b border-[#E2E8F0] py-4">
         <div className="container mx-auto px-4 flex justify-between items-center">
           <div>
@@ -172,27 +88,22 @@ const OrderTracking = () => {
                   <Navigation className="h-5 w-5 text-[#4338CA]" />
                   تتبع مباشر
                 </CardTitle>
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-[#475569]">🚗 المندوب | 🏠 موقع التوصيل</p>
-                  <button
-                    onClick={() => setFollowDriver(!followDriver)}
-                    style={{
-                      fontSize:"12px", padding:"4px 10px", borderRadius:"20px", border:"none", cursor:"pointer",
-                      background: followDriver ? "#4338CA" : "#F1F5F9",
-                      color: followDriver ? "#fff" : "#475569"
-                    }}>
-                    {followDriver ? "📍 تتبع المندوب" : "🔒 ثابت"}
-                  </button>
-                </div>
+                <p className="text-xs text-[#475569]">🚗 المندوب | 🏠 موقع التوصيل</p>
               </CardHeader>
               <CardContent className="p-0">
-                <div ref={mapRef} style={{ height: "450px", width: "100%" }}></div>
+                <MapTrack
+                  driverPos={driverPos}
+                  destPos={destPos}
+                  height="420px"
+                />
               </CardContent>
             </Card>
 
-            {!tracking.driver_location && (
+            {!driverPos && (
               <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center text-sm text-yellow-800">
-                {tracking.driver_info ? "⏳ بانتظار تحديث موقع المندوب..." : "📦 سيتم تخصيص مندوب قريباً"}
+                {tracking.driver_info
+                  ? "⏳ بانتظار تحديث موقع المندوب..."
+                  : "📦 سيتم تخصيص مندوب قريباً"}
               </div>
             )}
 
@@ -207,9 +118,11 @@ const OrderTracking = () => {
           {/* معلومات الطلب */}
           <div className="space-y-4">
             <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-[#4338CA]" />حالة الطلب
-              </CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5 text-[#4338CA]" />حالة الطلب
+                </CardTitle>
+              </CardHeader>
               <CardContent className="space-y-3">
                 <div>
                   <p className="text-xs uppercase text-[#475569] mb-1">الحالة</p>
@@ -231,9 +144,11 @@ const OrderTracking = () => {
 
             {tracking.driver_info && (
               <Card>
-                <CardHeader><CardTitle className="flex items-center gap-2">
-                  <Truck className="h-5 w-5 text-[#F97316]" />المندوب
-                </CardTitle></CardHeader>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Truck className="h-5 w-5 text-[#F97316]" />المندوب
+                  </CardTitle>
+                </CardHeader>
                 <CardContent className="space-y-3">
                   <div>
                     <p className="text-xs text-[#475569] mb-1">الاسم</p>
