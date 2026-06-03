@@ -40,12 +40,16 @@ VAPID_EMAIL       = os.environ.get('VAPID_EMAIL', 'mailto:admin@sahal.com')
 # إذا لم تكن المفاتيح موجودة، نولّدها تلقائياً (للتطوير فقط)
 if not VAPID_PRIVATE_KEY:
     try:
+        import base64 as _b64
         from py_vapid import Vapid
+        from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
         _v = Vapid()
         _v.generate_keys()
         VAPID_PRIVATE_KEY = _v.private_pem().decode()
-        VAPID_PUBLIC_KEY  = _v.public_key
-        logger.warning("VAPID keys auto-generated. Set VAPID_PRIVATE_KEY and VAPID_PUBLIC_KEY in env for production!")
+        # تحويل المفتاح العام إلى base64url (uncompressed point)
+        _pub_bytes = _v._private_key.public_key().public_bytes(Encoding.X962, PublicFormat.UncompressedPoint)
+        VAPID_PUBLIC_KEY  = _b64.urlsafe_b64encode(_pub_bytes).decode().rstrip('=')
+        logger.warning("VAPID keys auto-generated — add to env vars for production!")
         logger.info(f"VAPID_PUBLIC_KEY={VAPID_PUBLIC_KEY}")
     except Exception as _e:
         logger.warning(f"Could not generate VAPID keys: {_e}. Push notifications disabled.")
@@ -1594,13 +1598,17 @@ async def upload_image(
 
 async def _send_push_to_user(user_id: str, title: str, body: str, url: str = "/"):
     """إرسال Web Push لكل اشتراكات المستخدم"""
-    if not VAPID_PRIVATE_KEY:
+    if not VAPID_PRIVATE_KEY or not VAPID_PUBLIC_KEY:
+        logger.debug("Push skipped — VAPID keys not set")
         return
     try:
         from pywebpush import webpush, WebPushException
         import json as _json
         subs = await db.push_subscriptions.find({"user_id": user_id}, {"_id": 0}).to_list(20)
+        if not subs:
+            return
         payload = _json.dumps({"title": title, "body": body, "url": url})
+        logger.info(f"Sending push to {user_id} ({len(subs)} subscription(s)): {title}")
         for sub in subs:
             try:
                 webpush(
@@ -1609,14 +1617,16 @@ async def _send_push_to_user(user_id: str, title: str, body: str, url: str = "/"
                     vapid_private_key=VAPID_PRIVATE_KEY,
                     vapid_claims={"sub": VAPID_EMAIL},
                 )
+                logger.info(f"Push sent OK to {sub['subscription'].get('endpoint','')[:60]}")
             except Exception as exc:
-                # اشتراك منتهي الصلاحية — نحذفه
-                if hasattr(exc, 'response') and exc.response and exc.response.status_code in (404, 410):
-                    await db.push_subscriptions.delete_one({"sub_id": sub.get("sub_id")})
+                status = getattr(getattr(exc, 'response', None), 'status_code', None)
+                if status in (404, 410):
+                    logger.info(f"Push subscription expired — deleting")
+                    await db.push_subscriptions.delete_one({"subscription.endpoint": sub["subscription"].get("endpoint")})
                 else:
-                    logger.warning(f"Push send error: {exc}")
+                    logger.warning(f"Push send error ({status}): {exc}")
     except ImportError:
-        logger.warning("pywebpush not installed")
+        logger.error("pywebpush not installed — run: pip install pywebpush")
     except Exception as e:
         logger.error(f"Push error: {e}")
 
@@ -1624,8 +1634,8 @@ async def _send_push_to_user(user_id: str, title: str, body: str, url: str = "/"
 @api_router.get("/push/vapid-key")
 async def get_vapid_key():
     """إعادة المفتاح العام للـ VAPID"""
-    if not VAPID_PUBLIC_KEY:
-        raise HTTPException(status_code=503, detail="Push notifications not configured")
+    if not VAPID_PUBLIC_KEY or not isinstance(VAPID_PUBLIC_KEY, str) or len(VAPID_PUBLIC_KEY) < 10:
+        raise HTTPException(status_code=503, detail="Push notifications not configured — VAPID_PUBLIC_KEY missing")
     return {"public_key": VAPID_PUBLIC_KEY}
 
 

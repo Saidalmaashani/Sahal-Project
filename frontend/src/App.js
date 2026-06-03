@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from './components/ui/sonner';
+import PushPrompt from './components/PushPrompt';
 import '@/App.css';
 
 // Pages
@@ -56,6 +57,7 @@ function App() {
       <BrowserRouter>
         <AppRouter />
         <Toaster position="top-right" />
+        <PushPrompt />
       </BrowserRouter>
     </AuthProvider>
   );
