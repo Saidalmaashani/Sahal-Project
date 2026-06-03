@@ -43,10 +43,24 @@ const destIcon = L.divIcon({
   className: '',
 });
 
-const orderIcon = (isAssigned) => L.divIcon({
-  html: `<div style="background:${isAssigned ? '#10B981' : '#F97316'};color:white;padding:4px 10px;border-radius:8px;font-size:12px;font-family:Tajawal,sans-serif;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.25);font-weight:600">${isAssigned ? 'طلبي' : 'متاح'}</div>`,
+// أيقونة موقع المتجر (نقطة الاستلام)
+const makeStoreIcon = (isAssigned) => L.divIcon({
+  html: `<div style="background:${isAssigned ? '#10B981' : '#F97316'};color:white;padding:4px 10px;border-radius:8px;font-size:12px;font-family:Tajawal,sans-serif;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.25);font-weight:600">🏪 ${isAssigned ? 'متجري' : 'متجر'}</div>`,
   className: '',
-  iconAnchor: [35, 14],
+  iconAnchor: [42, 13],
+});
+
+// أيقونة موقع الزبون (نقطة التوصيل)
+const makeCustomerIcon = (isAssigned) => L.divIcon({
+  html: `<div style="position:relative;width:44px;height:52px">
+    <div style="position:absolute;inset:0 3px;bottom:8px;background:${isAssigned ? '#4338CA' : '#7C3AED'};border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 10px rgba(67,56,202,0.4)">
+      <span style="transform:rotate(45deg);font-size:18px">🏠</span>
+    </div>
+    <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:8px;height:8px;background:${isAssigned ? '#4338CA' : '#7C3AED'};border-radius:50%"></div>
+  </div>`,
+  iconSize: [44, 52],
+  iconAnchor: [22, 52],
+  className: '',
 });
 
 // حقن أنيميشن CSS مرة واحدة
@@ -67,15 +81,15 @@ const injectCSS = () => {
 
 // ===== مكوّن التحكم في الخريطة =====
 // يضبط الحدود مرة واحدة عند التحميل، ثم يتابع المندوب بانتقال ناعم
-const MapController = ({ driverPos, destPos, myPos, followDriver }) => {
+const MapController = ({ driverPos, destPos, myPos, followDriver, extraPoints = [] }) => {
   const map = useMap();
   const initialFitDone = useRef(false);
   const prevKey = useRef('');
 
-  // ضبط مبدئي: أظهر المندوب والوجهة معاً
+  // ضبط مبدئي: أظهر جميع النقاط معاً
   useEffect(() => {
     if (initialFitDone.current) return;
-    const pts = [driverPos, destPos, myPos].filter(Boolean);
+    const pts = [driverPos, destPos, myPos, ...extraPoints].filter(Boolean);
     if (pts.length >= 2) {
       map.fitBounds(pts.map(p => [p.lat, p.lng]), { padding: [60, 60], animate: false });
       initialFitDone.current = true;
@@ -83,7 +97,7 @@ const MapController = ({ driverPos, destPos, myPos, followDriver }) => {
       map.setView([pts[0].lat, pts[0].lng], 15, { animate: false });
       initialFitDone.current = true;
     }
-  }, [driverPos, destPos, myPos, map]);
+  }, [driverPos, destPos, myPos, map]); // extraPoints مقصود إغفاله — نفعّل الضبط مرة واحدة فقط
 
   // متابعة المندوب — انتقال ناعم عند كل تغيير موقع
   useEffect(() => {
@@ -123,9 +137,16 @@ const MapTrack = ({
   const driverIcon = liveMode && driverPos ? makeLiveDriverIcon() : makeStaticDriverIcon();
 
   const allPositions = [driverPos, destPos, myPos].filter(Boolean);
+  const orderPoints = [];
   orders.forEach(o => {
-    if (o.merchant_lat && o.merchant_lng)
+    if (o.merchant_lat && o.merchant_lng) {
       allPositions.push({ lat: o.merchant_lat, lng: o.merchant_lng });
+      orderPoints.push({ lat: o.merchant_lat, lng: o.merchant_lng });
+    }
+    if (o.delivery_lat && o.delivery_lng) {
+      allPositions.push({ lat: o.delivery_lat, lng: o.delivery_lng });
+      orderPoints.push({ lat: o.delivery_lat, lng: o.delivery_lng });
+    }
   });
 
   const defaultCenter = allPositions[0]
@@ -150,6 +171,7 @@ const MapTrack = ({
         destPos={destPos}
         myPos={myPos}
         followDriver={followDriver}
+        extraPoints={orderPoints}
       />
 
       {/* موقعي — للمندوب */}
@@ -186,15 +208,41 @@ const MapTrack = ({
       )}
 
       {/* طلبات لوحة المندوب */}
-      {orders.map(o =>
-        o.merchant_lat && o.merchant_lng ? (
-          <Marker
-            key={o.order_id}
-            position={[o.merchant_lat, o.merchant_lng]}
-            icon={orderIcon(!!o.driver_id)}
-          />
-        ) : null
-      )}
+      {orders.map(o => (
+        <React.Fragment key={o.order_id}>
+          {/* موقع المتجر (نقطة الاستلام) */}
+          {o.merchant_lat && o.merchant_lng && (
+            <Marker
+              position={[o.merchant_lat, o.merchant_lng]}
+              icon={makeStoreIcon(!!o.driver_id)}
+            />
+          )}
+
+          {/* موقع الزبون (نقطة التوصيل) */}
+          {o.delivery_lat && o.delivery_lng && (
+            <Marker
+              position={[o.delivery_lat, o.delivery_lng]}
+              icon={makeCustomerIcon(!!o.driver_id)}
+            />
+          )}
+
+          {/* خط من المتجر إلى الزبون */}
+          {o.merchant_lat && o.merchant_lng && o.delivery_lat && o.delivery_lng && (
+            <Polyline
+              positions={[
+                [o.merchant_lat, o.merchant_lng],
+                [o.delivery_lat, o.delivery_lng],
+              ]}
+              pathOptions={{
+                color: o.driver_id ? '#10B981' : '#94A3B8',
+                weight: 2.5,
+                dashArray: '8,5',
+                opacity: o.driver_id ? 0.8 : 0.45,
+              }}
+            />
+          )}
+        </React.Fragment>
+      ))}
     </MapContainer>
   );
 };

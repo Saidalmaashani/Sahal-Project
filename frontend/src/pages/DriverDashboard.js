@@ -134,6 +134,9 @@ const DriverDashboard = () => {
     const distToMerchant = myLocation && order.merchant_lat
       ? getDistance(myLocation.lat, myLocation.lng, order.merchant_lat, order.merchant_lng)
       : null;
+    const distToCustomer = myLocation && order.delivery_lat
+      ? getDistance(myLocation.lat, myLocation.lng, order.delivery_lat, order.delivery_lng)
+      : null;
     return (
       <div style={{ background: "#fff", border: "0.5px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginBottom: "12px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
@@ -149,15 +152,21 @@ const DriverDashboard = () => {
             {getStatusArabic(order.status)}
           </span>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "12px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "12px" }}>
           <div style={{ background: "#F8F9FA", borderRadius: "8px", padding: "8px" }}>
             <p style={{ fontSize: "11px", color: "#94A3B8", marginBottom: "2px" }}>المبلغ</p>
-            <p style={{ fontSize: "15px", fontWeight: 700, color: "#4338CA" }}>{order.total_amount.toFixed(3)} ر.ع</p>
+            <p style={{ fontSize: "14px", fontWeight: 700, color: "#4338CA" }}>{order.total_amount.toFixed(3)} ر.ع</p>
           </div>
-          <div style={{ background: "#F8F9FA", borderRadius: "8px", padding: "8px" }}>
-            <p style={{ fontSize: "11px", color: "#94A3B8", marginBottom: "2px" }}>المسافة للتاجر</p>
-            <p style={{ fontSize: "15px", fontWeight: 700, color: "#F97316" }}>
-              {distToMerchant ? `${distToMerchant} كم` : "فعّل الموقع"}
+          <div style={{ background: "#FFF7ED", borderRadius: "8px", padding: "8px" }}>
+            <p style={{ fontSize: "11px", color: "#94A3B8", marginBottom: "2px" }}>🏪 للمتجر</p>
+            <p style={{ fontSize: "14px", fontWeight: 700, color: "#F97316" }}>
+              {distToMerchant ? `${distToMerchant} كم` : myLocation ? "—" : "فعّل الموقع"}
+            </p>
+          </div>
+          <div style={{ background: "#EEF2FF", borderRadius: "8px", padding: "8px" }}>
+            <p style={{ fontSize: "11px", color: "#94A3B8", marginBottom: "2px" }}>🏠 للزبون</p>
+            <p style={{ fontSize: "14px", fontWeight: 700, color: "#4338CA" }}>
+              {distToCustomer ? `${distToCustomer} كم` : myLocation ? "—" : "فعّل الموقع"}
             </p>
           </div>
         </div>
@@ -272,7 +281,7 @@ const DriverDashboard = () => {
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-[#F97316]" />خريطة الطلبات
                 </CardTitle>
-                <p className="text-sm text-[#475569]">🔵 موقعك | 🟠 طلبات متاحة | 🟢 طلباتي</p>
+                <p className="text-sm text-[#475569]">🔵 موقعك | 🏪 المتجر (استلام) | 🏠 الزبون (توصيل)</p>
               </CardHeader>
               <CardContent className="p-0">
                 <MapTrack
