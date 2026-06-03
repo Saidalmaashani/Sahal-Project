@@ -23,11 +23,13 @@ const Shop = () => {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [stores, setStores] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
     fetchProducts();
+    fetchStores();
     if (user) fetchRecommendations();
   }, [category, user]);
 
@@ -43,6 +45,13 @@ const Shop = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchStores = async () => {
+    try {
+      const response = await api.get("/stores");
+      setStores(response.data.slice(0, 6));
+    } catch {}
   };
 
   const fetchRecommendations = async () => {

@@ -20,6 +20,7 @@ import MerchantDashboard from './pages/MerchantDashboard';
 import DriverDashboard from './pages/DriverDashboard';
 import MerchantProfile from './pages/MerchantProfile';
 import PaymentPage from './pages/PaymentPage';
+import StoreDetail from './pages/StoreDetail';
 import MyOrders from './pages/MyOrders';
 import CustomerProfile from './pages/CustomerProfile';
 
@@ -41,6 +42,7 @@ function AppRouter() {
       <Route path="/driver/dashboard" element={<DriverDashboard />} />
       <Route path="/merchant/profile" element={<MerchantProfile />} />
       <Route path="/payment" element={<PaymentPage />} />
+      <Route path="/store/:storeId" element={<StoreDetail />} />
       <Route path="/my-orders" element={<MyOrders />} />
       <Route path="/profile" element={<CustomerProfile />} />
       <Route path="*" element={<Navigate to="/" replace />} />
