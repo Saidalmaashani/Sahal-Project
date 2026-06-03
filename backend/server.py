@@ -13,6 +13,7 @@ from pathlib import Path
 from fastapi import FastAPI, APIRouter, HTTPException, Header, Request, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import Response
 from pydantic import BaseModel
 from motor.motor_asyncio import AsyncIOMotorClient
 import bcrypt as _bcrypt
@@ -31,6 +32,7 @@ JWT_ALGORITHM = 'HS256'
 JWT_EXPIRES_HOURS = 24 * 7  # أسبوع
 
 STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', '')
+BACKEND_URL    = os.environ.get('BACKEND_URL', '')  # e.g. https://sahal-backend.onrender.com
 
 # VAPID keys for Web Push Notifications
 VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
@@ -1555,13 +1557,23 @@ async def get_chat_history(authorization: Optional[str] = Header(None), request:
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB
 
+def _build_base_url(request: Request) -> str:
+    """يبني الـ base URL الصحيح في الإنتاج وفي التطوير"""
+    if BACKEND_URL:
+        return BACKEND_URL.rstrip("/")
+    # fallback: استخدم headers الـ proxy إذا كانت موجودة
+    proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+    host  = request.headers.get("x-forwarded-host", request.url.netloc)
+    return f"{proto}://{host}"
+
+
 @api_router.post("/upload/image")
 async def upload_image(
     file: UploadFile = File(...),
     authorization: Optional[str] = Header(None),
     request: Request = None
 ):
-    """رفع صورة منتج — يعيد URL الصورة"""
+    """رفع صورة — يحفظها في MongoDB ويعيد URL دائم لا يتأثر بإعادة النشر"""
     await get_current_user(authorization, request)
 
     if file.content_type not in ALLOWED_IMAGE_TYPES:
@@ -1574,14 +1586,35 @@ async def upload_image(
     ext = (file.filename or "image.jpg").rsplit(".", 1)[-1].lower()
     if ext not in {"jpg", "jpeg", "png", "webp", "gif"}:
         ext = "jpg"
-    filename = f"{uuid.uuid4().hex}.{ext}"
-    filepath = UPLOAD_DIR / filename
 
-    with open(filepath, "wb") as f:
-        f.write(contents)
+    file_id = uuid.uuid4().hex
+    content_type = file.content_type or "image/jpeg"
 
-    base_url = str(request.base_url).rstrip("/")
-    return {"url": f"{base_url}/uploads/{filename}"}
+    # الحفظ في MongoDB بدل filesystem (يبقى بعد كل redeploy)
+    await db.uploaded_files.insert_one({
+        "file_id": file_id,
+        "ext": ext,
+        "content_type": content_type,
+        "data": contents,
+        "size": len(contents),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+    base = _build_base_url(request)
+    return {"url": f"{base}/api/files/{file_id}"}
+
+
+@api_router.get("/files/{file_id}")
+async def serve_file(file_id: str):
+    """يعيد بيانات الصورة المخزنة في MongoDB"""
+    doc = await db.uploaded_files.find_one({"file_id": file_id}, {"_id": 0, "content_type": 1, "data": 1})
+    if not doc:
+        raise HTTPException(status_code=404, detail="File not found")
+    return Response(
+        content=bytes(doc["data"]),
+        media_type=doc.get("content_type", "image/jpeg"),
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
 
 
 # ==================== WEB PUSH NOTIFICATIONS ====================
