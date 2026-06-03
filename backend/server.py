@@ -37,23 +37,6 @@ VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
 VAPID_PUBLIC_KEY  = os.environ.get('VAPID_PUBLIC_KEY', '')
 VAPID_EMAIL       = os.environ.get('VAPID_EMAIL', 'mailto:admin@sahal.com')
 
-# إذا لم تكن المفاتيح موجودة، نولّدها تلقائياً (للتطوير فقط)
-if not VAPID_PRIVATE_KEY:
-    try:
-        import base64 as _b64
-        from py_vapid import Vapid
-        from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-        _v = Vapid()
-        _v.generate_keys()
-        VAPID_PRIVATE_KEY = _v.private_pem().decode()
-        # تحويل المفتاح العام إلى base64url (uncompressed point)
-        _pub_bytes = _v._private_key.public_key().public_bytes(Encoding.X962, PublicFormat.UncompressedPoint)
-        VAPID_PUBLIC_KEY  = _b64.urlsafe_b64encode(_pub_bytes).decode().rstrip('=')
-        logger.warning("VAPID keys auto-generated — add to env vars for production!")
-        logger.info(f"VAPID_PUBLIC_KEY={VAPID_PUBLIC_KEY}")
-    except Exception as _e:
-        logger.warning(f"Could not generate VAPID keys: {_e}. Push notifications disabled.")
-
 PLATFORM_FEE = 0.07   # 7% إجمالي
 ADMIN_FEE    = 0.02   # 2% للمدير
 DRIVER_FEE   = 0.05   # 5% للمندوب
@@ -1743,6 +1726,21 @@ async def push_status(
     }
 
 
+@api_router.post("/push/refresh")
+async def push_refresh(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+):
+    """حذف الاشتراكات القديمة — المستخدم يُعيد الاشتراك بمفاتيح الخادم الحالية"""
+    user = await get_current_user(authorization, request)
+    result = await db.push_subscriptions.delete_many({"user_id": user["user_id"]})
+    return {
+        "deleted": result.deleted_count,
+        "vapid_public_key": VAPID_PUBLIC_KEY,
+        "message": "تم حذف الاشتراكات القديمة — أعد الاشتراك الآن"
+    }
+
+
 @api_router.delete("/push/unsubscribe")
 async def push_unsubscribe(
     request: Request,
@@ -1811,6 +1809,50 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+async def init_vapid_keys():
+    """تحميل أو توليد مفاتيح VAPID — تُحفظ في MongoDB لتبقى ثابتة عبر إعادة التشغيل"""
+    global VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY
+
+    # 1) المفاتيح موجودة في env → استخدمها
+    if VAPID_PRIVATE_KEY and VAPID_PUBLIC_KEY and len(VAPID_PUBLIC_KEY) > 20:
+        logger.info(f"VAPID loaded from env. Public: {VAPID_PUBLIC_KEY[:20]}...")
+        return
+
+    # 2) حاول تحميلها من MongoDB
+    config = await db.system_config.find_one({"key": "vapid_keys"}, {"_id": 0})
+    if config and config.get("private_key") and config.get("public_key"):
+        VAPID_PRIVATE_KEY = config["private_key"]
+        VAPID_PUBLIC_KEY  = config["public_key"]
+        logger.info(f"VAPID loaded from MongoDB. Public: {VAPID_PUBLIC_KEY[:20]}...")
+        return
+
+    # 3) أنشئها لأول مرة واحفظها في MongoDB
+    try:
+        import base64 as _b64
+        from py_vapid import Vapid
+        from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+        _v = Vapid()
+        _v.generate_keys()
+        VAPID_PRIVATE_KEY = _v.private_pem().decode()
+        _pub_bytes = _v._private_key.public_key().public_bytes(Encoding.X962, PublicFormat.UncompressedPoint)
+        VAPID_PUBLIC_KEY  = _b64.urlsafe_b64encode(_pub_bytes).decode().rstrip('=')
+
+        await db.system_config.update_one(
+            {"key": "vapid_keys"},
+            {"$set": {
+                "key": "vapid_keys",
+                "private_key": VAPID_PRIVATE_KEY,
+                "public_key":  VAPID_PUBLIC_KEY,
+                "created_at":  datetime.now(timezone.utc).isoformat(),
+            }},
+            upsert=True
+        )
+        logger.info(f"VAPID keys generated & saved to MongoDB. Public: {VAPID_PUBLIC_KEY}")
+    except Exception as e:
+        logger.error(f"Failed to generate VAPID keys: {e}. Push notifications disabled.")
 
 
 @app.on_event("shutdown")

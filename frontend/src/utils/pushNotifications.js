@@ -100,3 +100,24 @@ export const requestAndSubscribe = async () => {
   await subscribeToPush();
   return 'granted';
 };
+
+// حذف الاشتراكات القديمة من الخادم ثم إعادة الاشتراك بالمفاتيح الجديدة
+export const refreshSubscription = async () => {
+  // 1) أخبر الخادم يحذف الاشتراكات القديمة
+  await api.post('/push/refresh').catch(() => {});
+
+  // 2) ألغِ اشتراك المتصفح القديم
+  if (isPushSupported()) {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration('/');
+      if (reg) {
+        const old = await reg.pushManager.getSubscription();
+        if (old) await old.unsubscribe();
+      }
+    } catch {}
+  }
+
+  // 3) اشترك من جديد
+  await subscribeToPush();
+  return 'granted';
+};

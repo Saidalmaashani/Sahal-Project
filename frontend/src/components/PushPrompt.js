@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BellRing, X, Send, CheckCircle, AlertCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   isPushSupported, getPushPermission,
-  requestAndSubscribe, getActiveSubscription,
+  requestAndSubscribe, getActiveSubscription, refreshSubscription,
 } from '../utils/pushNotifications';
 import api from '../utils/api';
 
@@ -98,39 +98,67 @@ const IOSGuide = ({ onClose }) => (
 );
 
 // ====== لوحة التشخيص ======
-const DiagnosticPanel = ({ onClose }) => {
-  const [status, setStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
+const DiagnosticPanel = ({ onClose, onRefreshed }) => {
+  const [status, setStatus]       = useState(null);
+  const [loading, setLoading]     = useState(true);
   const [testResult, setTestResult] = useState(null);
   const [testLoading, setTestLoading] = useState(false);
+  const [refreshLoading, setRefreshLoading] = useState(false);
 
-  useEffect(() => {
-    api.get('/push/status').then(r => setStatus(r.data)).catch(e => setStatus({ error: e.message })).finally(() => setLoading(false));
-  }, []);
+  const reload = () => {
+    setLoading(true);
+    setTestResult(null);
+    api.get('/push/status')
+      .then(r => setStatus(r.data))
+      .catch(e => setStatus({ error: e.message }))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { reload(); }, []);
 
   const sendTest = async () => {
     setTestLoading(true);
     setTestResult(null);
     try {
       const r = await api.post('/push/test');
-      setTestResult({ success: r.data.success, msg: r.data.hint, results: r.data.results });
+      setTestResult({ ok: r.data.success, hint: r.data.hint, results: r.data.results });
     } catch (e) {
-      setTestResult({ success: false, msg: e.response?.data?.detail || e.message });
+      const detail = e.response?.data?.detail || e.message;
+      setTestResult({ ok: false, hint: detail, results: [] });
     } finally {
       setTestLoading(false);
     }
   };
 
+  const handleRefresh = async () => {
+    setRefreshLoading(true);
+    setTestResult(null);
+    try {
+      await refreshSubscription();
+      reload();
+      if (onRefreshed) onRefreshed();
+    } catch (e) {
+      setTestResult({ ok: false, hint: 'فشل التجديد: ' + e.message, results: [] });
+    } finally {
+      setRefreshLoading(false);
+    }
+  };
+
+  const Row = ({ label, ok, detail }) => (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '10px', padding: '10px', background: ok ? '#F0FDF4' : '#FFF1F2', borderRadius: '10px', border: `1px solid ${ok ? '#BBF7D0' : '#FECDD3'}` }}>
+      {ok ? <CheckCircle style={{ width: 15, height: 15, color: '#10B981', flexShrink: 0, marginTop: 1 }} />
+           : <AlertCircle style={{ width: 15, height: 15, color: '#E11D48', flexShrink: 0, marginTop: 1 }} />}
+      <div>
+        <p style={{ fontWeight: 600, fontSize: '13px', margin: '0 0 2px', color: ok ? '#065F46' : '#BE123C' }}>{label}</p>
+        {detail && <p style={{ fontSize: '11px', color: '#475569', margin: 0, lineHeight: 1.5 }}>{detail}</p>}
+      </div>
+    </div>
+  );
+
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-      zIndex: 99998, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
-    }}>
-      <div style={{
-        background: '#fff', borderRadius: '16px', padding: '20px',
-        maxWidth: '460px', width: '100%', direction: 'rtl',
-        fontFamily: 'Tajawal,Cairo,sans-serif', maxHeight: '80vh', overflowY: 'auto',
-      }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 99998, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div style={{ background: '#fff', borderRadius: '16px', padding: '20px', maxWidth: '460px', width: '100%', direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif', maxHeight: '85vh', overflowY: 'auto' }}>
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h3 style={{ fontWeight: 700, fontSize: '17px', margin: 0 }}>تشخيص الإشعارات</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -139,79 +167,85 @@ const DiagnosticPanel = ({ onClose }) => {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '20px' }}>
-            <div style={{ width: '32px', height: '32px', border: '3px solid #4338CA', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto' }}></div>
+          <div style={{ textAlign: 'center', padding: '30px' }}>
+            <div style={{ width: '32px', height: '32px', border: '3px solid #4338CA', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }}></div>
+            <p style={{ fontSize: '13px', color: '#475569', margin: 0 }}>جارٍ الفحص...</p>
           </div>
         ) : status?.error ? (
           <p style={{ color: '#E11D48', fontSize: '13px' }}>خطأ: {status.error}</p>
         ) : (
           <>
-            {/* حالة الـ VAPID */}
-            <div style={{ marginBottom: '12px', padding: '12px', background: status.vapid_ok ? '#F0FDF4' : '#FFF1F2', borderRadius: '10px', border: `1px solid ${status.vapid_ok ? '#BBF7D0' : '#FECDD3'}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                {status.vapid_ok
-                  ? <CheckCircle style={{ width: 16, height: 16, color: '#10B981' }} />
-                  : <AlertCircle style={{ width: 16, height: 16, color: '#E11D48' }} />}
-                <span style={{ fontWeight: 600, fontSize: '13px' }}>مفاتيح VAPID</span>
-                <span style={{ fontSize: '11px', color: status.vapid_ok ? '#10B981' : '#E11D48', marginRight: 'auto' }}>
-                  {status.vapid_ok ? '✓ مضبوطة' : '✗ غير مضبوطة في Render!'}
-                </span>
-              </div>
-              {!status.vapid_ok && (
-                <p style={{ fontSize: '11px', color: '#BE123C', margin: 0 }}>
-                  اذهب لـ Render → sahal-backend → Environment Variables → أضف VAPID_PRIVATE_KEY و VAPID_PUBLIC_KEY
-                </p>
-              )}
-            </div>
+            <Row
+              label={status.vapid_ok ? `مفاتيح VAPID ✓ — ${status.vapid_public_key_preview}` : 'مفاتيح VAPID غير مضبوطة'}
+              ok={status.vapid_ok}
+              detail={!status.vapid_ok ? 'الخادم يولّد مفاتيح مؤقتة — اذهب لـ Render → sahal-backend → Environment → أضف VAPID_PRIVATE_KEY و VAPID_PUBLIC_KEY' : null}
+            />
 
-            {/* الاشتراكات */}
-            <div style={{ marginBottom: '12px', padding: '12px', background: status.subscriptions_count > 0 ? '#F0FDF4' : '#FFFBEB', borderRadius: '10px', border: `1px solid ${status.subscriptions_count > 0 ? '#BBF7D0' : '#FDE68A'}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                {status.subscriptions_count > 0
-                  ? <CheckCircle style={{ width: 16, height: 16, color: '#10B981' }} />
-                  : <AlertCircle style={{ width: 16, height: 16, color: '#F59E0B' }} />}
-                <span style={{ fontWeight: 600, fontSize: '13px' }}>الاشتراكات المحفوظة</span>
-                <span style={{ fontSize: '11px', marginRight: 'auto', color: '#475569' }}>{status.subscriptions_count} اشتراك</span>
-              </div>
-              {status.subscriptions.map((s, i) => (
-                <div key={i} style={{ fontSize: '11px', color: '#475569', padding: '4px 0', borderTop: i > 0 ? '1px solid #E2E8F0' : 'none' }}>
-                  <span style={{ fontWeight: 600, color: '#0F172A' }}>{s.platform}</span><br />
-                  <span style={{ fontFamily: 'monospace', fontSize: '10px' }}>{s.endpoint_preview}</span>
-                </div>
-              ))}
-              {status.subscriptions_count === 0 && (
-                <p style={{ fontSize: '11px', color: '#92400E', margin: 0 }}>
-                  لم يتم تفعيل الإشعارات بعد أو الاشتراك انتهت صلاحيته
-                </p>
-              )}
-            </div>
+            <Row
+              label={status.subscriptions_count > 0 ? `${status.subscriptions_count} اشتراك محفوظ` : 'لا يوجد اشتراك'}
+              ok={status.subscriptions_count > 0}
+              detail={
+                status.subscriptions_count > 0
+                  ? status.subscriptions.map(s => `${s.platform}: ${s.endpoint_preview}`).join('\n')
+                  : 'أعد تفعيل الإشعارات أو اضغط "تجديد الاشتراك"'
+              }
+            />
 
-            {/* إرسال اختبار */}
-            <button onClick={sendTest} disabled={testLoading || !status.vapid_ok || status.subscriptions_count === 0}
-              style={{
-                width: '100%', padding: '12px', borderRadius: '10px',
-                background: status.vapid_ok && status.subscriptions_count > 0 ? '#4338CA' : '#CBD5E1',
-                color: '#fff', border: 'none', fontSize: '14px', fontWeight: 700,
-                cursor: status.vapid_ok && status.subscriptions_count > 0 ? 'pointer' : 'not-allowed',
-                fontFamily: 'Tajawal,sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+            {/* زر تجديد الاشتراك — الحل الرئيسي لمشكلة "فشل الإرسال" */}
+            <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px', padding: '12px', marginBottom: '12px' }}>
+              <p style={{ fontWeight: 600, fontSize: '13px', color: '#92400E', margin: '0 0 6px' }}>
+                ⚠️ إذا كان الإرسال يفشل — سبب شائع: مفاتيح الخادم تغيّرت
+              </p>
+              <p style={{ fontSize: '12px', color: '#78350F', margin: '0 0 10px' }}>
+                الحل: اضغط "تجديد الاشتراك" لمزامنة جهازك مع مفاتيح الخادم الحالية
+              </p>
+              <button onClick={handleRefresh} disabled={refreshLoading} style={{
+                width: '100%', padding: '10px', borderRadius: '8px',
+                background: '#F97316', color: '#fff', border: 'none',
+                fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                fontFamily: 'Tajawal,sans-serif', opacity: refreshLoading ? 0.7 : 1,
               }}>
-              <Send style={{ width: 15, height: 15 }} />
-              {testLoading ? 'جارٍ الإرسال...' : 'أرسل إشعار اختبار'}
+                {refreshLoading ? 'جارٍ التجديد...' : '🔄 تجديد الاشتراك'}
+              </button>
+            </div>
+
+            {/* اختبار الإرسال */}
+            <button onClick={sendTest} disabled={testLoading || !status.vapid_ok || status.subscriptions_count === 0} style={{
+              width: '100%', padding: '11px', borderRadius: '10px',
+              background: (status.vapid_ok && status.subscriptions_count > 0) ? '#4338CA' : '#CBD5E1',
+              color: '#fff', border: 'none', fontSize: '14px', fontWeight: 700,
+              cursor: (status.vapid_ok && status.subscriptions_count > 0) ? 'pointer' : 'not-allowed',
+              fontFamily: 'Tajawal,sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              marginBottom: '10px',
+            }}>
+              <Send style={{ width: 14, height: 14 }} />
+              {testLoading ? 'جارٍ الإرسال...' : 'اختبار الإرسال'}
             </button>
 
             {testResult && (
-              <div style={{ marginTop: '10px', padding: '12px', borderRadius: '10px', background: testResult.success ? '#F0FDF4' : '#FFF1F2', border: `1px solid ${testResult.success ? '#BBF7D0' : '#FECDD3'}` }}>
-                <p style={{ fontWeight: 600, fontSize: '13px', margin: '0 0 4px', color: testResult.success ? '#065F46' : '#BE123C' }}>
-                  {testResult.success ? '✅ تم الإرسال!' : '❌ فشل الإرسال'}
+              <div style={{ padding: '12px', borderRadius: '10px', background: testResult.ok ? '#F0FDF4' : '#FFF1F2', border: `1px solid ${testResult.ok ? '#BBF7D0' : '#FECDD3'}` }}>
+                <p style={{ fontWeight: 700, fontSize: '13px', margin: '0 0 4px', color: testResult.ok ? '#065F46' : '#BE123C' }}>
+                  {testResult.ok ? '✅ تم الإرسال بنجاح!' : '❌ فشل الإرسال'}
                 </p>
-                <p style={{ fontSize: '12px', color: '#475569', margin: 0 }}>{testResult.msg}</p>
-                {testResult.success && (
+                <p style={{ fontSize: '12px', color: '#475569', margin: '0 0 6px' }}>{testResult.hint}</p>
+
+                {/* تفاصيل كل اشتراك */}
+                {testResult.results?.map((r, i) => (
+                  <div key={i} style={{ fontSize: '11px', padding: '4px 0', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#475569' }}>{r.platform}</span>
+                    <span style={{ fontWeight: 600, color: r.status === 'sent' ? '#10B981' : '#E11D48' }}>
+                      {r.status === 'sent' ? '✓ أُرسل' : `✗ ${r.error || 'فشل'}`}
+                    </span>
+                  </div>
+                ))}
+
+                {testResult.ok && (
                   <div style={{ marginTop: '8px', padding: '8px', background: '#FFF7ED', borderRadius: '8px' }}>
                     <p style={{ fontSize: '11px', color: '#92400E', margin: 0, fontWeight: 600 }}>
-                      📱 الآن: اقفل شاشة جهازك ← يجب أن يظهر الإشعار خلال ثوانٍ
+                      📱 اقفل شاشتك الآن ← يجب أن يظهر الإشعار
                     </p>
-                    <p style={{ fontSize: '11px', color: '#92400E', margin: '4px 0 0' }}>
-                      إذا لم يظهر: اذهب لـ الإعدادات → الإشعارات → سهل → فعّل "شاشة القفل"
+                    <p style={{ fontSize: '11px', color: '#92400E', margin: '3px 0 0' }}>
+                      إذا لم يظهر: الإعدادات → الإشعارات → سهل → فعّل "شاشة القفل" ✓
                     </p>
                   </div>
                 )}
@@ -219,6 +253,7 @@ const DiagnosticPanel = ({ onClose }) => {
             )}
           </>
         )}
+
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </div>
@@ -329,7 +364,7 @@ const PushPrompt = () => {
           )}
         </div>
         {showGuide && <IOSGuide onClose={() => setShowGuide(false)} />}
-        {showDiag && <DiagnosticPanel onClose={() => setShowDiag(false)} />}
+        {showDiag && <DiagnosticPanel onClose={() => setShowDiag(false)} onRefreshed={() => setPushStatus('granted')} />}
       </>
     );
   }
