@@ -30,6 +30,12 @@ services:
         sync: false
       - key: BACKEND_URL
         value: https://sahal-backend.onrender.com
+      - key: FRONTEND_URL
+        value: https://sahal-frontend.onrender.com
+      - key: SMTP_EMAIL
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
       - key: PORT
         value: "10000"
 

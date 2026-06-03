@@ -67,7 +67,13 @@ const Login = () => {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })} required dir="ltr" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">كلمة المرور</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">كلمة المرور</Label>
+                  <button type="button" onClick={() => navigate('/forgot-password')}
+                    className="text-xs text-[#4338CA] hover:underline font-medium">
+                    نسيت كلمة المرور؟
+                  </button>
+                </div>
                 <Input id="password" type="password" placeholder="••••••••" value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })} required dir="ltr" />
               </div>

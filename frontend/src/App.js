@@ -24,6 +24,8 @@ import PaymentPage from './pages/PaymentPage';
 import StoreDetail from './pages/StoreDetail';
 import MyOrders from './pages/MyOrders';
 import CustomerProfile from './pages/CustomerProfile';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function AppRouter() {
   return (
@@ -46,6 +48,8 @@ function AppRouter() {
       <Route path="/store/:storeId" element={<StoreDetail />} />
       <Route path="/my-orders" element={<MyOrders />} />
       <Route path="/profile" element={<CustomerProfile />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -6,6 +6,9 @@ import os
 import uuid
 import logging
 import secrets
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 from pathlib import Path
@@ -33,6 +36,11 @@ JWT_EXPIRES_HOURS = 24 * 7  # أسبوع
 
 STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', '')
 BACKEND_URL    = os.environ.get('BACKEND_URL', '')  # e.g. https://sahal-backend.onrender.com
+FRONTEND_URL   = os.environ.get('FRONTEND_URL', 'https://sahal-frontend.onrender.com')
+SMTP_HOST      = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+SMTP_PORT      = int(os.environ.get('SMTP_PORT', '587'))
+SMTP_EMAIL     = os.environ.get('SMTP_EMAIL', '')
+SMTP_PASSWORD  = os.environ.get('SMTP_PASSWORD', '')
 
 # VAPID keys for Web Push Notifications
 VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
@@ -387,6 +395,115 @@ async def logout(request: Request):
     if session_id:
         await db.user_sessions.delete_one({"session_id": session_id})
     return {"message": "تم تسجيل الخروج"}
+
+
+# ==================== PASSWORD RESET ====================
+
+async def _send_email(to: str, subject: str, html_body: str) -> bool:
+    """يرسل إيميل عبر SMTP — يرجع True عند النجاح"""
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        return False
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From']    = f"سهل Sahal <{SMTP_EMAIL}>"
+        msg['To']      = to
+        msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
+            server.ehlo()
+            server.starttls()
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.sendmail(SMTP_EMAIL, to, msg.as_string())
+        return True
+    except Exception as e:
+        logger.error(f"Email error: {e}")
+        return False
+
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(request: Request):
+    body = await request.json()
+    email = (body.get("email") or "").lower().strip()
+    if not email:
+        raise HTTPException(status_code=400, detail="البريد الإلكتروني مطلوب")
+
+    user = await db.users.find_one({"email": email}, {"_id": 0})
+    # نفس الرد بغض النظر عن وجود المستخدم (أمان)
+    generic_msg = "إذا كان البريد مسجلاً ستصلك رسالة إعادة تعيين خلال دقائق"
+
+    if not user or not user.get("password_hash"):
+        return {"message": generic_msg}
+
+    # احذف أي رموز قديمة وأنشئ رمزاً جديداً
+    token = uuid.uuid4().hex
+    expires_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+    await db.password_resets.delete_many({"email": email})
+    await db.password_resets.insert_one({
+        "token": token, "user_id": user["user_id"],
+        "email": email, "expires_at": expires_at, "used": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+
+    reset_url = f"{FRONTEND_URL}/reset-password?token={token}"
+
+    html = f"""
+    <div dir="rtl" style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#F8F9FA;border-radius:12px">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="display:inline-block;background:linear-gradient(135deg,#4338CA,#7C3AED);width:56px;height:56px;border-radius:14px;line-height:56px;font-size:28px;font-weight:700;color:#fff">س</div>
+        <h2 style="color:#0F172A;margin:8px 0 0;font-size:22px">سهل</h2>
+      </div>
+      <div style="background:#fff;border-radius:10px;padding:24px">
+        <h3 style="color:#4338CA;margin-top:0">إعادة تعيين كلمة المرور</h3>
+        <p style="color:#475569">مرحباً {user['name']}،</p>
+        <p style="color:#475569">تلقّينا طلباً لإعادة تعيين كلمة المرور لحسابك. اضغط على الزر أدناه:</p>
+        <div style="text-align:center;margin:24px 0">
+          <a href="{reset_url}" style="background:#4338CA;color:#fff;padding:13px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;display:inline-block">
+            إعادة تعيين كلمة المرور
+          </a>
+        </div>
+        <p style="color:#94A3B8;font-size:12px;border-top:1px solid #E2E8F0;padding-top:12px;margin-bottom:0">
+          ⏱️ الرابط صالح لمدة ساعة واحدة فقط.<br>
+          إذا لم تطلب هذا، تجاهل هذه الرسالة بأمان.
+        </p>
+      </div>
+    </div>
+    """
+
+    email_sent = await _send_email(email, "إعادة تعيين كلمة المرور — سهل", html)
+
+    result: dict = {"message": generic_msg}
+    if not email_sent:
+        # وضع التطوير — أرجع الرابط مباشرة إذا SMTP غير مضبوط
+        result["reset_url"] = reset_url
+        result["dev_note"] = "SMTP not configured — use reset_url directly"
+    return result
+
+
+@api_router.post("/auth/reset-password")
+async def reset_password(request: Request):
+    body = await request.json()
+    token       = (body.get("token") or "").strip()
+    new_password = (body.get("password") or "").strip()
+
+    if not token or not new_password:
+        raise HTTPException(status_code=400, detail="البيانات غير مكتملة")
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="كلمة المرور يجب أن تكون 8 أحرف على الأقل")
+
+    doc = await db.password_resets.find_one({"token": token, "used": False})
+    if not doc:
+        raise HTTPException(status_code=400, detail="الرابط غير صالح أو تم استخدامه مسبقاً")
+
+    if datetime.now(timezone.utc) > datetime.fromisoformat(doc["expires_at"]):
+        raise HTTPException(status_code=400, detail="انتهت صلاحية الرابط — اطلب رابطاً جديداً")
+
+    await db.users.update_one(
+        {"user_id": doc["user_id"]},
+        {"$set": {"password_hash": hash_password(new_password)}}
+    )
+    await db.password_resets.update_one({"token": token}, {"$set": {"used": True}})
+
+    return {"message": "تم تغيير كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن."}
 
 
 # ==================== USER PROFILE ====================
