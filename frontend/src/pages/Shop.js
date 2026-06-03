@@ -124,13 +124,19 @@ const StoreCard = ({ store, products, onAddToCart, navigate }) => {
       {/* رأس المتجر */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '48px', height: '48px', borderRadius: '12px',
-            background: 'linear-gradient(135deg,#4338CA,#7C3AED)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Store style={{ width: '24px', height: '24px', color: '#fff' }} />
-          </div>
+          {store.logo ? (
+            <img src={store.logo} alt={store.name}
+              style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', border: '1px solid #E2E8F0', flexShrink: 0 }}
+              onError={e => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'flex'); }} />
+          ) : (
+            <div style={{
+              width: '48px', height: '48px', borderRadius: '12px',
+              background: 'linear-gradient(135deg,#4338CA,#7C3AED)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <Store style={{ width: '24px', height: '24px', color: '#fff' }} />
+            </div>
+          )}
           <div>
             <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A' }}>{store.name}</h3>
             {store.description && (

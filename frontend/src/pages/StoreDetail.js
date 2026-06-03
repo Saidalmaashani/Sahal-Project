@@ -63,14 +63,21 @@ const StoreDetail = () => {
       </header>
 
       {/* بانر المتجر */}
-      <div style={{background:"linear-gradient(135deg,#4338CA,#F97316)", padding:"40px 0"}}>
+      <div style={{background:"linear-gradient(135deg,#4338CA,#7C3AED)", padding:"40px 0"}}>
         <div className="container mx-auto px-4 text-center text-white">
-          <div style={{width:"80px",height:"80px",background:"rgba(255,255,255,0.2)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}>
-            <Store style={{width:"40px",height:"40px"}} />
-          </div>
+          {store?.logo ? (
+            <div style={{width:"96px",height:"96px",borderRadius:"20px",overflow:"hidden",margin:"0 auto 16px",border:"3px solid rgba(255,255,255,0.35)",boxShadow:"0 8px 32px rgba(0,0,0,0.25)"}}>
+              <img src={store.logo} alt={store.name} style={{width:"100%",height:"100%",objectFit:"cover"}}
+                onError={e=>{e.target.style.display="none"; e.target.parentNode.innerHTML='<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"><svg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2\'><path d=\'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\'/></svg></div>';}} />
+            </div>
+          ) : (
+            <div style={{width:"96px",height:"96px",background:"rgba(255,255,255,0.18)",borderRadius:"20px",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",border:"2px solid rgba(255,255,255,0.3)"}}>
+              <Store style={{width:"44px",height:"44px"}} />
+            </div>
+          )}
           <h1 style={{fontFamily:"Cairo,sans-serif",fontSize:"28px",fontWeight:700,marginBottom:"8px"}}>{store?.name}</h1>
-          <p style={{opacity:0.9,fontSize:"15px"}}>{store?.description}</p>
-          <div style={{marginTop:"12px",fontSize:"13px",opacity:0.8}}>
+          {store?.description && <p style={{opacity:0.85,fontSize:"15px",maxWidth:"480px",margin:"0 auto"}}>{store.description}</p>}
+          <div style={{marginTop:"12px",fontSize:"13px",opacity:0.75}}>
             {products.length} منتج متوفر
           </div>
         </div>
