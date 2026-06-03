@@ -46,6 +46,20 @@ const Cart = () => {
       tap: false, dragging: true, touchZoom: true, scrollWheelZoom: false
     }).setView([initLat, initLng], 13);
     
+    // تحديد موقع المستخدم تلقائياً عند فتح الخريطة
+    if (navigator.geolocation && !deliveryLocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          leafletMap.current.setView([lat, lng], 15);
+          markerRef.current.setLatLng([lat, lng]);
+          await updateLocationInfo(lat, lng);
+        },
+        () => {}
+      );
+    }
+    
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap'
     }).addTo(leafletMap.current);
