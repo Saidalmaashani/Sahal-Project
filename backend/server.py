@@ -1382,6 +1382,159 @@ async def get_all_users(authorization: Optional[str] = Header(None), request: Re
     return users
 
 
+class AdminUserUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    role: Optional[str] = None
+    address: Optional[str] = None
+    is_approved: Optional[bool] = None
+
+
+class AdminCreateUser(BaseModel):
+    name: str
+    email: str
+    password: str
+    role: str = "shopper"
+    phone: Optional[str] = None
+
+
+class AdminNotifyPayload(BaseModel):
+    title: str
+    message: str
+    link: Optional[str] = None
+
+
+@api_router.patch("/admin/users/{user_id}")
+async def admin_update_user(
+    user_id: str,
+    payload: AdminUserUpdate,
+    authorization: Optional[str] = Header(None),
+    request: Request = None
+):
+    """تعديل بيانات أي مستخدم"""
+    admin = await get_current_user(authorization, request)
+    if admin["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    target = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+
+    update_data = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if "role" in update_data and update_data["role"] not in ["admin", "merchant", "shopper", "driver"]:
+        raise HTTPException(status_code=400, detail="دور غير صالح")
+
+    if update_data:
+        await db.users.update_one({"user_id": user_id}, {"$set": update_data})
+
+    updated = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
+    return updated
+
+
+@api_router.delete("/admin/users/{user_id}")
+async def admin_delete_user(
+    user_id: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None
+):
+    """حذف مستخدم وبياناته"""
+    admin = await get_current_user(authorization, request)
+    if admin["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    if user_id == admin["user_id"]:
+        raise HTTPException(status_code=400, detail="لا يمكنك حذف حسابك الخاص")
+
+    target = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+
+    await db.users.delete_one({"user_id": user_id})
+    await db.cart_items.delete_many({"user_id": user_id})
+    await db.notifications.delete_many({"user_id": user_id})
+    await db.push_subscriptions.delete_many({"user_id": user_id})
+    return {"message": "تم حذف المستخدم"}
+
+
+@api_router.post("/admin/users")
+async def admin_create_user(
+    payload: AdminCreateUser,
+    authorization: Optional[str] = Header(None),
+    request: Request = None
+):
+    """إنشاء مستخدم جديد من قِبَل المدير"""
+    admin = await get_current_user(authorization, request)
+    if admin["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    existing = await db.users.find_one({"email": payload.email.lower()})
+    if existing:
+        raise HTTPException(status_code=400, detail="البريد الإلكتروني مستخدم بالفعل")
+    if payload.role not in ["admin", "merchant", "shopper", "driver"]:
+        raise HTTPException(status_code=400, detail="دور غير صالح")
+
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+    new_user = User(
+        user_id=user_id,
+        email=payload.email.lower(),
+        name=payload.name,
+        role=payload.role,
+        password_hash=hash_password(payload.password),
+        phone=payload.phone,
+        is_approved=True,
+        referral_code=f"SAHAL{uuid.uuid4().hex[:6].upper()}",
+        referral_earnings=0.0,
+        created_at=datetime.now(timezone.utc).isoformat(),
+        auth_provider="local"
+    )
+    await db.users.insert_one(new_user.model_dump())
+    result = new_user.model_dump()
+    result.pop("password_hash", None)
+    return result
+
+
+@api_router.post("/admin/users/{user_id}/notify")
+async def admin_notify_user(
+    user_id: str,
+    payload: AdminNotifyPayload,
+    authorization: Optional[str] = Header(None),
+    request: Request = None
+):
+    """إرسال إشعار/رسالة لمستخدم معين"""
+    admin = await get_current_user(authorization, request)
+    if admin["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    target = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+
+    await _create_notification(user_id, "admin_message", payload.title, payload.message, payload.link or "/")
+    return {"message": "تم الإرسال"}
+
+
+@api_router.post("/admin/broadcast")
+async def admin_broadcast(
+    payload: AdminNotifyPayload,
+    role: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
+    request: Request = None
+):
+    """إرسال إشعار جماعي لكل المستخدمين أو لدور محدد"""
+    admin = await get_current_user(authorization, request)
+    if admin["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    query = {}
+    if role and role != "all":
+        query["role"] = role
+
+    all_users = await db.users.find(query, {"_id": 0, "user_id": 1}).to_list(10000)
+    for u in all_users:
+        await _create_notification(u["user_id"], "admin_message", payload.title, payload.message, payload.link or "/")
+
+    return {"message": f"تم الإرسال لـ {len(all_users)} مستخدم"}
+
+
 @api_router.patch("/admin/users/{user_id}/approve")
 async def approve_user(
     user_id: str,
