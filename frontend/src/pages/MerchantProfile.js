@@ -30,8 +30,8 @@ const MerchantProfile = () => {
   const initMap = () => {
     if (!mapRef.current || leafletMap.current || !window.L) return;
     const L = window.L;
-    const initLat = location.lat || 23.5880;
-    const initLng = location.lng || 58.3829;
+    const initLat = location.lat || 17.0151;
+    const initLng = location.lng || 54.0924;
     leafletMap.current = L.map(mapRef.current, { tap: false, dragging: true, touchZoom: true, scrollWheelZoom: false }).setView([initLat, initLng], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(leafletMap.current);
     markerRef.current = L.marker([initLat, initLng], { draggable: true }).addTo(leafletMap.current);
@@ -125,11 +125,11 @@ const MerchantProfile = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>خط العرض (Latitude)</Label>
-                <Input value={location.lat} onChange={e => setLocation({...location, lat: e.target.value})} dir="ltr" placeholder="23.5880" />
+                <Input value={location.lat} onChange={e => setLocation({...location, lat: e.target.value})} dir="ltr" placeholder="17.0151" />
               </div>
               <div>
                 <Label>خط الطول (Longitude)</Label>
-                <Input value={location.lng} onChange={e => setLocation({...location, lng: e.target.value})} dir="ltr" placeholder="58.3829" />
+                <Input value={location.lng} onChange={e => setLocation({...location, lng: e.target.value})} dir="ltr" placeholder="54.0924" />
               </div>
             </div>
 

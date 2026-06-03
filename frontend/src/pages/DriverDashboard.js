@@ -47,7 +47,7 @@ const DriverDashboard = () => {
   const initMap = () => {
     if (!mapRef.current || leafletMap.current || !window.L) return;
     const L = window.L;
-    leafletMap.current = L.map(mapRef.current, { tap: false, dragging: true, touchZoom: true, scrollWheelZoom: false }).setView([23.5880, 58.3829], 8);
+    leafletMap.current = L.map(mapRef.current, { tap: false, dragging: true, touchZoom: true, scrollWheelZoom: false }).setView([17.0151, 54.0924], 8);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(leafletMap.current);
   };
 
