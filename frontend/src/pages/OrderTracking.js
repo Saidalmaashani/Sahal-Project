@@ -27,6 +27,7 @@ const OrderTracking = () => {
   const driverMarkerRef = useRef(null);
   const destMarkerRef = useRef(null);
   const lineRef = useRef(null);
+  const [followDriver, setFollowDriver] = useState(true);
 
   useEffect(() => {
     if (authLoading) return;
@@ -68,7 +69,9 @@ const OrderTracking = () => {
           .addTo(leafletMap.current)
           .bindPopup(`<div style="direction:rtl;font-family:Tajawal,sans-serif"><b>🚗 المندوب</b><br/>${trackingData.driver_info?.name || ""}</div>`);
       }
-      leafletMap.current.setView([driverLoc.lat, driverLoc.lng], 14);
+      if (followDriver) {
+        leafletMap.current.setView([driverLoc.lat, driverLoc.lng], 14);
+      }
     }
 
     // علامة الوجهة
@@ -93,10 +96,12 @@ const OrderTracking = () => {
         ], { color: "#4338CA", weight: 3, dashArray: "8,8", opacity: 0.7 }).addTo(leafletMap.current);
 
         // ضبط الخريطة لتظهر كل النقاط
-        leafletMap.current.fitBounds([
-          [driverLoc.lat, driverLoc.lng],
-          [trackingData.delivery_lat, trackingData.delivery_lng]
-        ], { padding: [40, 40] });
+        if (followDriver) {
+          leafletMap.current.fitBounds([
+            [driverLoc.lat, driverLoc.lng],
+            [trackingData.delivery_lat, trackingData.delivery_lng]
+          ], { padding: [40, 40] });
+        }
       }
     }
   };
@@ -167,7 +172,18 @@ const OrderTracking = () => {
                   <Navigation className="h-5 w-5 text-[#4338CA]" />
                   تتبع مباشر
                 </CardTitle>
-                <p className="text-xs text-[#475569]">🚗 المندوب | 🏠 موقع التوصيل</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-[#475569]">🚗 المندوب | 🏠 موقع التوصيل</p>
+                  <button
+                    onClick={() => setFollowDriver(!followDriver)}
+                    style={{
+                      fontSize:"12px", padding:"4px 10px", borderRadius:"20px", border:"none", cursor:"pointer",
+                      background: followDriver ? "#4338CA" : "#F1F5F9",
+                      color: followDriver ? "#fff" : "#475569"
+                    }}>
+                    {followDriver ? "📍 تتبع المندوب" : "🔒 ثابت"}
+                  </button>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
                 <div ref={mapRef} style={{ height: "450px", width: "100%" }}></div>
