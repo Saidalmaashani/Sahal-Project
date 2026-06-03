@@ -1671,18 +1671,46 @@ async def push_test(
     request: Request,
     authorization: Optional[str] = Header(None),
 ):
-    """إرسال إشعار اختبار للمستخدم الحالي"""
+    """إرسال إشعار اختبار فوري — يظهر حتى عند قفل الشاشة"""
     user = await get_current_user(authorization, request)
-    subs_count = await db.push_subscriptions.count_documents({"user_id": user["user_id"]})
-    if subs_count == 0:
-        raise HTTPException(status_code=404, detail=f"لا يوجد اشتراك Push لهذا المستخدم ({user['user_id']})")
-    await _send_push_to_user(
-        user["user_id"],
-        "اختبار سهل 🔔",
-        f"مرحباً {user['name']}! الإشعارات تعمل بشكل صحيح ✅",
-        "/shop"
-    )
-    return {"message": "Push sent", "subscriptions": subs_count}
+    subs = await db.push_subscriptions.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(10)
+    if not subs:
+        raise HTTPException(status_code=404, detail=f"لا يوجد اشتراك Push — فعّل الإشعارات أولاً")
+
+    results = []
+    try:
+        from pywebpush import webpush, WebPushException
+        import json as _json
+        payload = _json.dumps({
+            "title": "اختبار سهل 🔔",
+            "body": f"مرحباً {user['name']}! الإشعارات تعمل ✅ — اقفل الشاشة لتراها",
+            "url": "/shop"
+        })
+        for sub in subs:
+            endpoint = sub["subscription"].get("endpoint", "")
+            platform = "Apple/iOS" if "apple.com" in endpoint else "Chrome/Android" if "google" in endpoint or "fcm" in endpoint else "Other"
+            try:
+                webpush(
+                    subscription_info=sub["subscription"],
+                    data=payload,
+                    vapid_private_key=VAPID_PRIVATE_KEY,
+                    vapid_claims={"sub": VAPID_EMAIL},
+                )
+                results.append({"platform": platform, "status": "sent", "endpoint": endpoint[:50]})
+            except Exception as exc:
+                status_code = getattr(getattr(exc, 'response', None), 'status_code', None)
+                results.append({"platform": platform, "status": "failed", "error": str(exc)[:100], "http_status": status_code})
+                if status_code in (404, 410):
+                    await db.push_subscriptions.delete_one({"subscription.endpoint": endpoint})
+    except ImportError:
+        raise HTTPException(status_code=503, detail="pywebpush not installed on server")
+
+    success = any(r["status"] == "sent" for r in results)
+    return {
+        "success": success,
+        "results": results,
+        "hint": "اقفل شاشة جهازك — يجب أن يظهر الإشعار خلال ثوانٍ" if success else "فشل الإرسال — تحقق من VAPID keys في Render"
+    }
 
 
 @api_router.get("/push/status")
@@ -1690,17 +1718,28 @@ async def push_status(
     request: Request,
     authorization: Optional[str] = Header(None),
 ):
-    """حالة Push للمستخدم الحالي"""
+    """تشخيص كامل لحالة Push"""
     user = await get_current_user(authorization, request)
-    subs = await db.push_subscriptions.find(
-        {"user_id": user["user_id"]}, {"_id": 0, "subscription.keys": 0}
-    ).to_list(10)
+    subs = await db.push_subscriptions.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(10)
+
+    sub_info = []
+    for s in subs:
+        ep = s["subscription"].get("endpoint", "")
+        platform = "Apple/iOS (APNS)" if "apple.com" in ep else \
+                   "Chrome/Android (FCM)" if ("google" in ep or "fcm" in ep or "googleapis" in ep) else \
+                   "Firefox" if "mozilla" in ep else "Unknown"
+        sub_info.append({
+            "platform": platform,
+            "endpoint_preview": ep[:70] + "...",
+            "saved_at": s.get("updated_at"),
+        })
+
     return {
-        "user_id": user["user_id"],
+        "vapid_ok": bool(VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY and isinstance(VAPID_PUBLIC_KEY, str) and len(VAPID_PUBLIC_KEY) > 20),
+        "vapid_public_key_preview": (VAPID_PUBLIC_KEY[:20] + "...") if VAPID_PUBLIC_KEY else "NOT SET",
         "subscriptions_count": len(subs),
-        "vapid_configured": bool(VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY),
-        "vapid_public_key_preview": VAPID_PUBLIC_KEY[:20] + "..." if VAPID_PUBLIC_KEY else None,
-        "subscriptions": [{"endpoint_preview": s["subscription"]["endpoint"][:60] + "...", "updated_at": s.get("updated_at")} for s in subs]
+        "subscriptions": sub_info,
+        "user": user["name"],
     }
 
 

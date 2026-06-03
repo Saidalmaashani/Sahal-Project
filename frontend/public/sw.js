@@ -1,54 +1,57 @@
-// Service Worker — سهل Web Push
-// iOS 16.4+ compatible
+// Service Worker — سهل | Lock-Screen Push (iOS 16.4+ / Android)
+// IMPORTANT: Must be served from root scope /
 
+self.addEventListener('install', () => {
+  // تثبيت فوري بدون انتظار
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  // السيطرة على كل نوافذ التطبيق فوراً
+  event.waitUntil(self.clients.claim());
+});
+
+// ===== استقبال Push من الخادم =====
 self.addEventListener('push', (event) => {
-  // لا تتجاهل حتى لو البيانات فارغة
-  let data = {};
+  // Parse payload — iOS sends data even on locked screen
+  let payload = { title: 'سهل', body: 'لديك إشعار جديد', url: '/shop' };
   if (event.data) {
-    try { data = event.data.json(); }
-    catch { data = { title: 'سهل', body: event.data.text() }; }
+    try { Object.assign(payload, event.data.json()); }
+    catch { payload.body = event.data.text() || payload.body; }
   }
 
-  const title = data.title || 'سهل';
-
-  // iOS Safari: أبسط options ممكنة (لا badge, لا vibrate, لا actions, لا image)
-  const options = {
-    body: data.body || '',
+  // iOS Safari lock screen: MUST use these exact minimal options
+  // Adding unsupported options (vibrate, badge, actions) silently breaks iOS
+  const notifOptions = {
+    body: payload.body,
     icon: '/logo192.png',
-    data: { url: data.url || '/shop' },
-    tag: 'sahal-' + (data.tag || Date.now()),
-    // dir و lang مهمين للعربية
-    dir: 'rtl',
-    lang: 'ar',
+    data: { url: payload.url },
+    // tag جديد لكل إشعار — لا تستبدله بإشعار قديم
+    tag: 'sahal-' + Date.now(),
   };
 
+  // event.waitUntil ضروري — يمنع iOS من إيقاف الـ SW قبل ظهور الإشعار
   event.waitUntil(
-    self.registration.showNotification(title, options)
+    self.registration.showNotification(payload.title, notifOptions)
   );
 });
 
-// ضغط على الإشعار → فتح التطبيق
+// ===== الضغط على الإشعار =====
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-
-  const targetUrl = event.notification.data?.url || '/shop';
-  const origin = self.location.origin;
-  const fullUrl = targetUrl.startsWith('http') ? targetUrl : origin + targetUrl;
+  const url = (self.location.origin) + (event.notification.data?.url || '/shop');
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((list) => {
-        for (const client of list) {
-          if (client.url.startsWith(origin) && 'focus' in client) {
-            client.focus();
-            if ('navigate' in client) client.navigate(fullUrl);
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clients) => {
+        for (const c of clients) {
+          if (c.url.startsWith(self.location.origin) && 'focus' in c) {
+            c.focus();
+            if ('navigate' in c) c.navigate(url);
             return;
           }
         }
-        return clients.openWindow(fullUrl);
+        return self.clients.openWindow(url);
       })
   );
 });
-
-self.addEventListener('install', () => { self.skipWaiting(); });
-self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
