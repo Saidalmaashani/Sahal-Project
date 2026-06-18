@@ -800,19 +800,55 @@ async def create_product(
 
 
 @api_router.get("/products")
-async def list_products(category: Optional[str] = None, search: Optional[str] = None):
-    """قائمة المنتجات العامة — يُخفي المنتجات المنفدة تلقائياً"""
-    query = {"stock": {"$gt": 0}}
+async def list_products(
+    category: Optional[str] = None,
+    search: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    min_rating: Optional[float] = None,
+    in_stock_only: bool = True,
+    sort_by: Optional[str] = None,   # price_asc | price_desc | rating | newest
+):
+    query: dict = {}
+    if in_stock_only:
+        query["stock"] = {"$gt": 0}
     if category and category != "all":
         query["category"] = category
     if search:
         query["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"description": {"$regex": search, "$options": "i"}}
+            {"name":        {"$regex": search, "$options": "i"}},
+            {"description": {"$regex": search, "$options": "i"}},
+            {"brand":       {"$regex": search, "$options": "i"}},
         ]
+    if min_price is not None or max_price is not None:
+        price_q: dict = {}
+        if min_price is not None: price_q["$gte"] = min_price
+        if max_price is not None: price_q["$lte"] = max_price
+        query["price"] = price_q
+    if min_rating is not None:
+        query["average_rating"] = {"$gte": min_rating}
 
-    products = await db.products.find(query, {"_id": 0}).limit(200).to_list(200)
-    return products
+    sort_map = {
+        "price_asc":  [("price", 1)],
+        "price_desc": [("price", -1)],
+        "rating":     [("average_rating", -1), ("review_count", -1)],
+        "newest":     [("created_at", -1)],
+    }
+    sort = sort_map.get(sort_by, [("created_at", -1)])
+
+    cursor = db.products.find(query, {"_id": 0}).sort(sort).limit(200)
+    return await cursor.to_list(200)
+
+
+@api_router.get("/products/search/autocomplete")
+async def search_autocomplete(q: str = ""):
+    if not q or len(q) < 2:
+        return []
+    results = await db.products.find(
+        {"name": {"$regex": q, "$options": "i"}, "stock": {"$gt": 0}},
+        {"_id": 0, "product_id": 1, "name": 1, "price": 1, "category": 1, "images": 1}
+    ).limit(8).to_list(8)
+    return results
 
 
 @api_router.get("/products/my")
@@ -1009,6 +1045,56 @@ async def _update_product_rating(product_id: str):
         {"product_id": product_id},
         {"$set": {"average_rating": avg, "review_count": count}},
     )
+
+
+# ==================== WISHLIST ENDPOINTS ====================
+
+@api_router.post("/wishlist/toggle/{product_id}")
+async def toggle_wishlist(
+    product_id: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None,
+):
+    user = await get_current_user(authorization, request)
+    existing = await db.wishlists.find_one(
+        {"user_id": user["user_id"], "product_id": product_id}
+    )
+    if existing:
+        await db.wishlists.delete_one({"_id": existing["_id"]})
+        return {"added": False}
+    await db.wishlists.insert_one({
+        "wishlist_id": f"wl_{uuid.uuid4().hex[:12]}",
+        "user_id": user["user_id"],
+        "product_id": product_id,
+        "added_at": datetime.now(timezone.utc).isoformat(),
+    })
+    return {"added": True}
+
+
+@api_router.get("/wishlist")
+async def get_wishlist(authorization: Optional[str] = Header(None), request: Request = None):
+    user = await get_current_user(authorization, request)
+    items = await db.wishlists.find(
+        {"user_id": user["user_id"]}, {"_id": 0}
+    ).sort("added_at", -1).to_list(500)
+    product_ids = [i["product_id"] for i in items]
+    products = await db.products.find(
+        {"product_id": {"$in": product_ids}}, {"_id": 0}
+    ).to_list(500)
+    prod_map = {p["product_id"]: p for p in products}
+    return [
+        {**prod_map[i["product_id"]], "added_at": i["added_at"]}
+        for i in items if i["product_id"] in prod_map
+    ]
+
+
+@api_router.get("/wishlist/ids")
+async def get_wishlist_ids(authorization: Optional[str] = Header(None), request: Request = None):
+    user = await get_current_user(authorization, request)
+    items = await db.wishlists.find(
+        {"user_id": user["user_id"]}, {"_id": 0, "product_id": 1}
+    ).to_list(500)
+    return [i["product_id"] for i in items]
 
 
 # ==================== CART ENDPOINTS ====================

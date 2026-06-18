@@ -1,19 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/api';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
 import { Card, CardContent } from '../components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import {
-  ShoppingCart, Search, LogOut, User, Sparkles, Gift, Package,
-  Menu, X as XIcon, LayoutDashboard, Store, ChevronLeft, ChevronRight,
-  ArrowLeft,
+  ShoppingCart, LogOut, User, Sparkles, Gift, Package,
+  Menu, X as XIcon, LayoutDashboard, Store, ArrowLeft, Heart,
 } from 'lucide-react';
 import SupportChat from '../components/SupportChat';
+import SearchAutocomplete from '../components/SearchAutocomplete';
+import FilterPanel from '../components/FilterPanel';
+import WishlistButton from '../components/WishlistButton';
+import { StarDisplay } from '../components/StarRating';
 
 const ProductSkeleton = () => (
   <div style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E2E8F0' }}>
@@ -47,7 +48,8 @@ const CATEGORIES = [
 
 // بطاقة منتج مصغرة
 const ProductCard = ({ product, onAddToCart, onClick }) => (
-  <Card className="overflow-hidden border border-[#E2E8F0] hover:shadow-md transition-shadow duration-200 cursor-pointer" onClick={onClick}>
+  <Card className="overflow-hidden border border-[#E2E8F0] hover:shadow-md transition-shadow duration-200 cursor-pointer" onClick={onClick}
+    style={{ position: 'relative' }}>
     <div className="aspect-square overflow-hidden bg-[#F8F9FA] relative">
       <img
         src={product.images?.[0] || PLACEHOLDER_IMAGE}
@@ -55,19 +57,17 @@ const ProductCard = ({ product, onAddToCart, onClick }) => (
         className="w-full h-full object-cover"
         onError={handleImageError}
       />
-      {product.images?.length > 1 && (
-        <span style={{
-          position: 'absolute', bottom: '6px', left: '6px',
-          background: 'rgba(0,0,0,0.55)', color: '#fff',
-          fontSize: '10px', padding: '2px 6px', borderRadius: '6px',
-        }}>
-          +{product.images.length - 1} صور
-        </span>
-      )}
+      <div style={{ position: 'absolute', top: 6, left: 6 }}>
+        <WishlistButton productId={product.product_id} size={14} />
+      </div>
     </div>
     <CardContent className="p-3">
       <h3 className="font-medium text-sm mb-1 line-clamp-1">{product.name}</h3>
-      <p className="text-xs text-[#475569] mb-2 line-clamp-1">{product.category}</p>
+      {product.average_rating > 0 && (
+        <div style={{ marginBottom: 4 }}>
+          <StarDisplay value={product.average_rating} count={product.review_count} size={11} />
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <span className="text-base font-bold text-[#4338CA]">ر.ع {product.price.toFixed(2)}</span>
         <Button
@@ -94,18 +94,17 @@ const BigProductCard = ({ product, onAddToCart, onClick }) => (
           className="w-full h-full object-cover"
           onError={handleImageError}
         />
-        {product.images?.length > 1 && (
-          <span style={{
-            position: 'absolute', bottom: '8px', left: '8px',
-            background: 'rgba(0,0,0,0.55)', color: '#fff',
-            fontSize: '11px', padding: '3px 8px', borderRadius: '8px',
-          }}>
-            +{product.images.length - 1} صور
-          </span>
-        )}
+        <div style={{ position: 'absolute', top: 8, left: 8 }}>
+          <WishlistButton productId={product.product_id} size={16} />
+        </div>
       </div>
       <CardContent className="p-4">
         <h3 className="font-medium text-lg mb-1 line-clamp-1">{product.name}</h3>
+        {product.average_rating > 0 && (
+          <div style={{ marginBottom: 6 }}>
+            <StarDisplay value={product.average_rating} count={product.review_count} size={13} />
+          </div>
+        )}
         <p className="text-sm text-[#475569] mb-2 line-clamp-2">{product.description}</p>
         <div className="flex items-center justify-between">
           <span className="text-2xl font-bold text-[#4338CA]">ر.ع {product.price.toFixed(2)}</span>
@@ -196,6 +195,8 @@ const StoreCard = ({ store, products, onAddToCart, navigate }) => {
   );
 };
 
+const INITIAL_FILTERS = { minPrice: '', maxPrice: '', minRating: 0, sortBy: 'newest' };
+
 const Shop = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -203,47 +204,52 @@ const Shop = () => {
   const [recommendations, setRecommendations] = useState([]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
+  const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [loading, setLoading] = useState(true);
   const [stores, setStores] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
-  const [activeView, setActiveView] = useState('stores'); // 'stores' | 'all'
+  const [activeView, setActiveView] = useState('stores');
 
-  useEffect(() => {
-    fetchProducts();
-    fetchStores();
-    if (user) fetchRecommendations();
-  }, [category, user]);
+  const activeFilterCount = [
+    filters.minPrice, filters.maxPrice,
+    filters.minRating > 0 ? 1 : null,
+    filters.sortBy !== 'newest' ? 1 : null,
+  ].filter(Boolean).length;
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
     try {
       const params = {};
       if (category && category !== 'all') params.category = category;
       if (search) params.search = search;
+      if (filters.minPrice) params.min_price = filters.minPrice;
+      if (filters.maxPrice) params.max_price = filters.maxPrice;
+      if (filters.minRating) params.min_rating = filters.minRating;
+      if (filters.sortBy)    params.sort_by = filters.sortBy;
       const response = await api.get('/products', { params });
       setProducts(response.data);
     } catch {
       toast.error('فشل تحميل المنتجات');
-    } finally {
-      setLoading(false);
-    }
-  };
+    } finally { setLoading(false); }
+  }, [category, search, filters]);
+
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+
+  useEffect(() => {
+    fetchStores();
+    if (user) fetchRecommendations();
+  }, [user]);
 
   const fetchStores = async () => {
-    try {
-      const response = await api.get("/stores");
-      setStores(response.data);
-    } catch {}
+    try { setStores((await api.get('/stores')).data); } catch {}
   };
 
   const fetchRecommendations = async () => {
-    try {
-      const response = await api.get('/products/recommendations/me');
-      setRecommendations(response.data.slice(0, 6));
-    } catch {}
+    try { setRecommendations((await api.get('/products/recommendations/me')).data.slice(0, 6)); } catch {}
   };
 
-  const handleSearch = (e) => { e.preventDefault(); fetchProducts(); setActiveView('all'); };
+  const handleSearch = () => { setActiveView('all'); fetchProducts(); };
 
   const addToCart = async (productId) => {
     if (!user) {
@@ -320,6 +326,17 @@ const Shop = () => {
                 </div>
               )}
 
+              {/* زر المفضلة في الهيدر */}
+              {user && (
+                <motion.button
+                  whileTap={{ scale: 0.93 }}
+                  onClick={() => navigate('/wishlist')}
+                  style={{ padding: '8px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#fff', cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Heart style={{ width: 20, height: 20, color: '#E11D48' }} />
+                </motion.button>
+              )}
+
               {user && (
                 <div className="relative sm:hidden" ref={menuRef}>
                   <button
@@ -331,9 +348,10 @@ const Shop = () => {
                   {menuOpen && (
                     <div style={{ position: 'absolute', top: '110%', left: 0, background: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '200px', zIndex: 100, overflow: 'hidden' }}>
                       {[
-                        { icon: Package, label: 'طلباتي', path: '/my-orders' },
-                        { icon: User, label: 'حسابي', path: '/profile' },
-                        { icon: Gift, label: 'الإحالات', path: '/referrals' },
+                        { icon: Package, label: 'طلباتي',    path: '/my-orders' },
+                        { icon: Heart,   label: 'مفضلتي',    path: '/wishlist' },
+                        { icon: User,    label: 'حسابي',     path: '/profile' },
+                        { icon: Gift,    label: 'الإحالات',  path: '/referrals' },
                         ...(user.role !== 'shopper' ? [{ icon: LayoutDashboard, label: 'لوحة التحكم', path: getDashboardPath() }] : []),
                       ].map(({ icon: Icon, label, path }) => (
                         <button key={path} onClick={() => { navigate(path); setMenuOpen(false); }}
@@ -361,30 +379,31 @@ const Shop = () => {
         </div>
       </header>
 
-      {/* شريط البحث والفئات */}
+      {/* شريط البحث المتقدم */}
       <div className="bg-white border-b border-[#E2E8F0] py-4">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row gap-3">
-            <form onSubmit={handleSearch} className="flex-1 flex gap-2">
-              <Input
-                placeholder="ابحث عن المنتجات أو المتاجر..."
+        <div className="container mx-auto px-4 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1">
+              <SearchAutocomplete
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="flex-1"
+                onChange={setSearch}
+                onSearch={handleSearch}
+                placeholder="ابحث عن منتج، علامة تجارية..."
               />
-              <Button type="submit" className="bg-[#4338CA] hover:bg-[#3730A3]">
-                <Search className="h-4 w-4 ml-2" />بحث
-              </Button>
-            </form>
-            <Select value={category} onValueChange={(v) => { setCategory(v); setActiveView('all'); }}>
-              <SelectTrigger className="w-full md:w-[200px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map(c => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            </div>
+            <select
+              value={category}
+              onChange={e => { setCategory(e.target.value); setActiveView('all'); }}
+              style={{ padding: '10px 14px', borderRadius: '12px', border: '1.5px solid #E2E8F0', background: '#fff', fontSize: '14px', fontFamily: 'Tajawal,sans-serif', color: '#475569', cursor: 'pointer', outline: 'none' }}
+            >
+              {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
           </div>
+          <FilterPanel
+            filters={filters}
+            onChange={(f) => { setFilters(f); setActiveView('all'); }}
+            activeCount={activeFilterCount}
+          />
         </div>
       </div>
 

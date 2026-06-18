@@ -15,6 +15,7 @@ import SupportChat from '../components/SupportChat';
 import ReviewList from '../components/ReviewList';
 import ReviewForm from '../components/ReviewForm';
 import { StarDisplay } from '../components/StarRating';
+import WishlistButton from '../components/WishlistButton';
 
 const PLACEHOLDER = 'https://images.pexels.com/photos/17938771/pexels-photo-17938771.jpeg';
 
@@ -226,6 +227,7 @@ const ProductDetail = () => {
                 <button onClick={share} style={{ padding: '12px', border: '1px solid #E2E8F0', borderRadius: '10px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Share2 style={{ width: '18px', height: '18px', color: '#475569' }} />
                 </button>
+                <WishlistButton productId={product.product_id} size={20} />
               </div>
             )}
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { WishlistProvider } from './contexts/WishlistContext';
 import { Toaster } from './components/ui/sonner';
 import PushPrompt from './components/PushPrompt';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -27,6 +28,7 @@ import MyOrders from './pages/MyOrders';
 import CustomerProfile from './pages/CustomerProfile';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import WishlistPage from './pages/WishlistPage';
 
 const pageVariants = {
   initial: { opacity: 0, y: 10 },
@@ -72,6 +74,7 @@ function AnimatedRoutes() {
         <Route path="/profile" element={<PageWrapper><CustomerProfile /></PageWrapper>} />
         <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
         <Route path="/reset-password" element={<PageWrapper><ResetPassword /></PageWrapper>} />
+        <Route path="/wishlist" element={<PageWrapper><WishlistPage /></PageWrapper>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>
@@ -81,11 +84,13 @@ function AnimatedRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AnimatedRoutes />
-        <Toaster position="top-right" />
-        <PushPrompt />
-      </BrowserRouter>
+      <WishlistProvider>
+        <BrowserRouter>
+          <AnimatedRoutes />
+          <Toaster position="top-right" />
+          <PushPrompt />
+        </BrowserRouter>
+      </WishlistProvider>
     </AuthProvider>
   );
 }
