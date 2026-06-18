@@ -1566,6 +1566,39 @@ async def get_my_driver_profile(
     return driver
 
 
+@api_router.get("/drivers/stats")
+async def get_driver_stats(authorization: Optional[str] = Header(None), request: Request = None):
+    user = await get_current_user(authorization, request)
+    if user["role"] != "driver":
+        raise HTTPException(status_code=403, detail="Drivers only")
+    driver = await db.delivery_drivers.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not driver:
+        raise HTTPException(status_code=404, detail="ملف السائق غير موجود")
+
+    delivered = await db.orders.find(
+        {"driver_id": driver["driver_id"], "status": "delivered", "payment_status": "paid"},
+        {"_id": 0, "total_amount": 1, "created_at": 1, "updated_at": 1}
+    ).to_list(2000)
+
+    total_delivered = len(delivered)
+    total_earnings  = round(sum(o.get("total_amount", 0) * 0.05 for o in delivered), 3)
+    total_revenue   = round(sum(o.get("total_amount", 0) for o in delivered), 3)
+
+    # أيام نشطة
+    active_days = len({o["created_at"][:10] for o in delivered if o.get("created_at")})
+
+    return {
+        "total_delivered": total_delivered,
+        "total_earnings":  total_earnings,
+        "total_revenue":   total_revenue,
+        "active_days":     active_days,
+        "driver_id":       driver["driver_id"],
+        "vehicle_type":    driver.get("vehicle_type"),
+        "vehicle_number":  driver.get("vehicle_number"),
+        "is_available":    driver.get("is_available", True),
+    }
+
+
 @api_router.get("/deliveries")
 async def get_deliveries(authorization: Optional[str] = Header(None), request: Request = None):
     user = await get_current_user(authorization, request)
