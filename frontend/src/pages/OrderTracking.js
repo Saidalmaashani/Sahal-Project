@@ -4,16 +4,17 @@ import { useAuth } from "../contexts/AuthContext";
 import api from "../utils/api";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight, Truck, MapPin, Phone, Clock,
   Package, Navigation, Crosshair, AlertCircle,
   CheckCircle2, Timer, Gauge,
 } from "lucide-react";
 import MapTrack from "../components/MapTrack";
+import { useWebSocket } from "../hooks/useWebSocket";
 
-const POLL_INTERVAL_ACTIVE = 4000;    // 4 ثوانٍ — عندما المندوب في الطريق
-const POLL_INTERVAL_WAITING = 10000;  // 10 ثوانٍ — قبل تخصيص المندوب
+const POLL_INTERVAL_ACTIVE = 15000;   // fallback polling فقط — WebSocket يتولى التحديث الفوري
+const POLL_INTERVAL_WAITING = 20000;
 
 const STATUS_STEPS = [
   { key: "pending",   label: "جارٍ التجهيز",    icon: Package },
@@ -58,6 +59,7 @@ const OrderTracking = () => {
   const pollRef = useRef(null);
   const tickRef = useRef(null);
   const prevDriverKey = useRef('');
+  const token = localStorage.getItem('token');
 
   // جلب بيانات التتبع
   const fetchTracking = useCallback(async () => {
@@ -122,6 +124,26 @@ const OrderTracking = () => {
     pollRef.current = setInterval(fetchTracking, interval);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [tracking?.status, fetchTracking]);
+
+  // WebSocket — تحديث موقع السائق فوراً
+  useWebSocket({
+    path: `/ws/tracking/${orderId}`,
+    token,
+    enabled: !!tracking && tracking.status === 'shipped',
+    onMessage: useCallback((data) => {
+      if (data.type === 'tracking_update') {
+        setTracking(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            driver_location: { lat: data.lat, lng: data.lng, updated_at: data.updated_at },
+          };
+        });
+        setLastUpdated(new Date());
+        setSecondsAgo(0);
+      }
+    }, []),
+  });
 
   // عداد "منذ X ثانية"
   useEffect(() => {

@@ -13,10 +13,12 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 from pathlib import Path
 
-from fastapi import FastAPI, APIRouter, HTTPException, Header, Request, File, UploadFile
+from fastapi import FastAPI, APIRouter, HTTPException, Header, Request, File, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import Response
+import asyncio
+import json
 from pydantic import BaseModel
 from motor.motor_asyncio import AsyncIOMotorClient
 import bcrypt as _bcrypt
@@ -50,6 +52,68 @@ VAPID_EMAIL       = os.environ.get('VAPID_EMAIL', 'mailto:admin@sahal.com')
 PLATFORM_FEE = 0.07   # 7% إجمالي
 ADMIN_FEE    = 0.02   # 2% للمدير
 DRIVER_FEE   = 0.05   # 5% للمندوب
+
+
+# ==================== WEBSOCKET MANAGER ====================
+
+class ConnectionManager:
+    def __init__(self):
+        # notifications: {user_id: set of WebSocket}
+        self.notifications: dict[str, set] = {}
+        # chat: {order_id: set of WebSocket}
+        self.chat: dict[str, set] = {}
+        # tracking: {order_id: set of WebSocket}
+        self.tracking: dict[str, set] = {}
+
+    def _add(self, store: dict, key: str, ws: WebSocket):
+        store.setdefault(key, set()).add(ws)
+
+    def _remove(self, store: dict, key: str, ws: WebSocket):
+        store.get(key, set()).discard(ws)
+        if not store.get(key):
+            store.pop(key, None)
+
+    async def _send(self, ws: WebSocket, data: dict):
+        try:
+            await ws.send_text(json.dumps(data, ensure_ascii=False))
+        except Exception:
+            pass
+
+    # --- Notifications ---
+    def connect_notification(self, user_id: str, ws: WebSocket):
+        self._add(self.notifications, user_id, ws)
+
+    def disconnect_notification(self, user_id: str, ws: WebSocket):
+        self._remove(self.notifications, user_id, ws)
+
+    async def broadcast_notification(self, user_id: str, data: dict):
+        for ws in list(self.notifications.get(user_id, set())):
+            await self._send(ws, {"type": "notification", **data})
+
+    # --- Chat ---
+    def connect_chat(self, order_id: str, ws: WebSocket):
+        self._add(self.chat, order_id, ws)
+
+    def disconnect_chat(self, order_id: str, ws: WebSocket):
+        self._remove(self.chat, order_id, ws)
+
+    async def broadcast_chat(self, order_id: str, data: dict):
+        for ws in list(self.chat.get(order_id, set())):
+            await self._send(ws, {"type": "chat_message", **data})
+
+    # --- Tracking ---
+    def connect_tracking(self, order_id: str, ws: WebSocket):
+        self._add(self.tracking, order_id, ws)
+
+    def disconnect_tracking(self, order_id: str, ws: WebSocket):
+        self._remove(self.tracking, order_id, ws)
+
+    async def broadcast_tracking(self, order_id: str, data: dict):
+        for ws in list(self.tracking.get(order_id, set())):
+            await self._send(ws, {"type": "tracking_update", **data})
+
+
+ws_manager = ConnectionManager()
 
 # Uploads directory
 UPLOAD_DIR = Path(__file__).parent / "uploads"
@@ -1070,18 +1134,23 @@ async def get_payment_status(session_id: str):
 
 
 async def _create_notification(user_id: str, notif_type: str, title: str, message: str, link: str = None):
-    """إنشاء إشعار لمستخدم + إرسال Web Push تلقائياً"""
-    await db.notifications.insert_one({
-        "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+    """إنشاء إشعار لمستخدم + بث WebSocket + Web Push"""
+    notif_id = f"notif_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc).isoformat()
+    notif_doc = {
+        "notification_id": notif_id,
         "user_id": user_id,
         "type": notif_type,
         "title": title,
         "message": message,
         "is_read": False,
         "link": link,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    })
-    # إرسال Web Push إذا كان المستخدم مشتركاً
+        "created_at": now,
+    }
+    await db.notifications.insert_one(notif_doc)
+    # بث فوري عبر WebSocket
+    await ws_manager.broadcast_notification(user_id, notif_doc)
+    # Web Push للأجهزة
     await _send_push_to_user(user_id, title, message, link or "/")
 
 
@@ -1172,7 +1241,7 @@ async def send_order_message(
 
     message_id = f"msg_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc).isoformat()
-    await db.order_messages.insert_one({
+    msg_doc = {
         "message_id": message_id,
         "order_id": order_id,
         "sender_id": user["user_id"],
@@ -1180,7 +1249,10 @@ async def send_order_message(
         "sender_role": user["role"],
         "message": message_text,
         "created_at": now,
-    })
+    }
+    await db.order_messages.insert_one(msg_doc)
+    # بث فوري لجميع المشتركين في محادثة الطلب
+    await ws_manager.broadcast_chat(order_id, msg_doc)
 
     # إشعار للأطراف الأخرى
     recipients: set = set()
@@ -1353,16 +1425,33 @@ async def update_driver_location(
     if user["role"] != "driver":
         raise HTTPException(status_code=403, detail="Drivers only")
 
+    now = datetime.now(timezone.utc).isoformat()
     result = await db.delivery_drivers.update_one(
         {"user_id": user["user_id"]},
         {"$set": {
             "current_lat": lat,
             "current_lng": lng,
-            "location_updated_at": datetime.now(timezone.utc).isoformat()
+            "location_updated_at": now,
         }}
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="ملف السائق غير موجود")
+
+    # بث الموقع لجميع المشتركين في تتبع الطلبات المرتبطة بهذا السائق
+    driver_doc = await db.delivery_drivers.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if driver_doc:
+        active_orders = await db.orders.find(
+            {"driver_id": driver_doc["driver_id"], "status": "shipped"},
+            {"order_id": 1, "_id": 0}
+        ).to_list(20)
+        tracking_payload = {
+            "lat": lat, "lng": lng,
+            "updated_at": now,
+            "driver_id": driver_doc["driver_id"],
+        }
+        for o in active_orders:
+            await ws_manager.broadcast_tracking(o["order_id"], tracking_payload)
+
     return {"message": "تم تحديث الموقع"}
 
 
@@ -2195,6 +2284,74 @@ async def seed_admin():
 async def health_check():
     """نقطة فحص صحة الخادم"""
     return {"status": "ok", "service": "sahal-api"}
+
+
+# ==================== WEBSOCKET ENDPOINTS ====================
+
+async def _ws_auth(token: str) -> dict | None:
+    """تحقق من JWT في WebSocket"""
+    try:
+        payload = pyjwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user = await db.users.find_one({"user_id": payload["user_id"]}, {"_id": 0, "password_hash": 0})
+        return user
+    except Exception:
+        return None
+
+
+@app.websocket("/ws/notifications")
+async def ws_notifications(websocket: WebSocket, token: str = ""):
+    user = await _ws_auth(token)
+    if not user:
+        await websocket.close(code=4001)
+        return
+    await websocket.accept()
+    ws_manager.connect_notification(user["user_id"], websocket)
+    try:
+        while True:
+            await asyncio.sleep(30)
+            await websocket.send_text(json.dumps({"type": "ping"}))
+    except (WebSocketDisconnect, Exception):
+        ws_manager.disconnect_notification(user["user_id"], websocket)
+
+
+@app.websocket("/ws/chat/{order_id}")
+async def ws_chat(websocket: WebSocket, order_id: str, token: str = ""):
+    user = await _ws_auth(token)
+    if not user:
+        await websocket.close(code=4001)
+        return
+    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    if not order:
+        await websocket.close(code=4004)
+        return
+    await websocket.accept()
+    ws_manager.connect_chat(order_id, websocket)
+    try:
+        while True:
+            await asyncio.sleep(30)
+            await websocket.send_text(json.dumps({"type": "ping"}))
+    except (WebSocketDisconnect, Exception):
+        ws_manager.disconnect_chat(order_id, websocket)
+
+
+@app.websocket("/ws/tracking/{order_id}")
+async def ws_tracking(websocket: WebSocket, order_id: str, token: str = ""):
+    user = await _ws_auth(token)
+    if not user:
+        await websocket.close(code=4001)
+        return
+    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    if not order:
+        await websocket.close(code=4004)
+        return
+    await websocket.accept()
+    ws_manager.connect_tracking(order_id, websocket)
+    try:
+        while True:
+            await asyncio.sleep(30)
+            await websocket.send_text(json.dumps({"type": "ping"}))
+    except (WebSocketDisconnect, Exception):
+        ws_manager.disconnect_tracking(order_id, websocket)
 
 
 # ==================== INCLUDE ROUTER ====================

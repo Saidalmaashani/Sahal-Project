@@ -7,12 +7,28 @@ import { Input } from '../components/ui/input';
 import { Card, CardContent } from '../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 import {
   ShoppingCart, Search, LogOut, User, Sparkles, Gift, Package,
   Menu, X as XIcon, LayoutDashboard, Store, ChevronLeft, ChevronRight,
   ArrowLeft,
 } from 'lucide-react';
 import SupportChat from '../components/SupportChat';
+
+const ProductSkeleton = () => (
+  <div style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E2E8F0' }}>
+    <div style={{ height: '200px', background: 'linear-gradient(90deg, #F1F5F9 25%, #E8EDF5 50%, #F1F5F9 75%)', backgroundSize: '200% 100%', animation: 'shimmerSlide 1.5s ease-in-out infinite' }} />
+    <div style={{ padding: '14px' }}>
+      <div style={{ height: '16px', background: '#F1F5F9', borderRadius: '6px', marginBottom: '8px', width: '80%', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+      <div style={{ height: '12px', background: '#F1F5F9', borderRadius: '6px', marginBottom: '12px', width: '60%', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+      <div style={{ height: '20px', background: '#EEF2FF', borderRadius: '6px', width: '40%', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+    </div>
+    <style>{`
+      @keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:.4} }
+      @keyframes shimmerSlide { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    `}</style>
+  </div>
+);
 import NotificationBell from '../components/NotificationBell';
 
 const PLACEHOLDER_IMAGE = 'https://images.pexels.com/photos/17938771/pexels-photo-17938771.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940';
@@ -434,8 +450,8 @@ const Shop = () => {
             </div>
 
             {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4338CA] mx-auto"></div>
+              <div className="grid grid-cols-1 gap-4">
+                {[1,2,3].map(i => <ProductSkeleton key={i} />)}
               </div>
             ) : stores.length === 0 ? (
               <div className="text-center py-16">
@@ -472,8 +488,8 @@ const Shop = () => {
             </div>
 
             {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4338CA] mx-auto"></div>
+              <div className="bento-grid">
+                {[1,2,3,4,5,6].map(i => <ProductSkeleton key={i} />)}
               </div>
             ) : products.length === 0 ? (
               <div className="text-center py-12">

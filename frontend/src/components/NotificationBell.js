@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api';
 import {
   Bell, CheckCheck, Trash2, Package, Truck, CheckCircle,
@@ -9,6 +10,7 @@ import {
   isPushSupported, getPushPermission, getActiveSubscription,
   requestAndSubscribe, unsubscribeFromPush,
 } from '../utils/pushNotifications';
+import { useWebSocket } from '../hooks/useWebSocket';
 
 const TYPE_CONFIG = {
   order_confirmed: { icon: CheckCircle, color: '#10B981', bg: '#ECFDF5', label: 'طلب مؤكد' },
@@ -40,6 +42,8 @@ const NotificationBell = () => {
   const panelRef = useRef(null);
   const pollRef  = useRef(null);
 
+  const token = localStorage.getItem('token');
+
   const fetchNotifs = useCallback(async () => {
     try {
       const r = await api.get('/notifications');
@@ -50,9 +54,25 @@ const NotificationBell = () => {
 
   useEffect(() => {
     fetchNotifs();
-    pollRef.current = setInterval(fetchNotifs, 30000);
+    // polling كـ fallback كل دقيقتين بدلاً من 30 ثانية (WebSocket يتولى الفوري)
+    pollRef.current = setInterval(fetchNotifs, 120000);
     return () => clearInterval(pollRef.current);
   }, [fetchNotifs]);
+
+  // WebSocket — إشعارات فورية
+  useWebSocket({
+    path: '/ws/notifications',
+    token,
+    onMessage: useCallback((data) => {
+      if (data.type === 'notification') {
+        setNotifs(prev => {
+          if (prev.find(n => n.notification_id === data.notification_id)) return prev;
+          return [data, ...prev].slice(0, 50);
+        });
+        setUnread(prev => prev + 1);
+      }
+    }, []),
+  });
 
   // تحقق من حالة Push عند الفتح
   useEffect(() => {
@@ -122,7 +142,10 @@ const NotificationBell = () => {
   return (
     <div style={{ position: 'relative' }} ref={panelRef}>
       {/* زر الجرس */}
-      <button
+      <motion.button
+        whileTap={{ scale: 0.9 }}
+        animate={unread > 0 ? { rotate: [0, -15, 15, -10, 10, 0] } : {}}
+        transition={unread > 0 ? { duration: 0.5 } : {}}
         onClick={() => setOpen(!open)}
         style={{
           position: 'relative', padding: '8px',
@@ -134,37 +157,52 @@ const NotificationBell = () => {
         aria-label="الإشعارات"
       >
         <Bell style={{ width: 20, height: 20, color: open ? '#4338CA' : '#475569' }} />
-        {unread > 0 && (
-          <span style={{
-            position: 'absolute', top: '4px', right: '4px',
-            background: '#E11D48', color: '#fff',
-            borderRadius: '50%', fontSize: '10px', fontWeight: 700,
-            minWidth: '18px', height: '18px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '0 3px', lineHeight: 1,
-            boxShadow: '0 0 0 2px #fff'
-          }}>
-            {unread > 99 ? '99+' : unread}
-          </span>
-        )}
-      </button>
+        <AnimatePresence>
+          {unread > 0 && (
+            <motion.span
+              key={unread}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+              style={{
+                position: 'absolute', top: '4px', right: '4px',
+                background: '#E11D48', color: '#fff',
+                borderRadius: '50%', fontSize: '10px', fontWeight: 700,
+                minWidth: '18px', height: '18px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '0 3px', lineHeight: 1,
+                boxShadow: '0 0 0 2px #fff'
+              }}
+            >
+              {unread > 99 ? '99+' : unread}
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </motion.button>
 
       {/* لوحة الإشعارات */}
+      <AnimatePresence>
       {open && (
-        <div style={{
-          position: 'absolute',
-          top: 'calc(100% + 8px)',
-          left: '50%', transform: 'translateX(-50%)',
-          width: 'min(360px, calc(100vw - 32px))',
-          background: '#fff',
-          border: '1px solid #E2E8F0',
-          borderRadius: '16px',
-          boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
-          zIndex: 200,
-          overflow: 'hidden',
-          direction: 'rtl',
-          fontFamily: 'Tajawal,Cairo,sans-serif',
-        }}>
+        <motion.div
+          initial={{ opacity: 0, y: -8, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -8, scale: 0.96 }}
+          transition={{ type: 'spring', damping: 22, stiffness: 350 }}
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 8px)',
+            left: '50%', transform: 'translateX(-50%)',
+            width: 'min(360px, calc(100vw - 32px))',
+            background: '#fff',
+            border: '1px solid #E2E8F0',
+            borderRadius: '16px',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+            zIndex: 200,
+            overflow: 'hidden',
+            direction: 'rtl',
+            fontFamily: 'Tajawal,Cairo,sans-serif',
+          }}>
           {/* Header */}
           <div style={{ padding: '14px 16px', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -292,8 +330,9 @@ const NotificationBell = () => {
               </button>
             </div>
           )}
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -5,9 +5,28 @@ import api from '../utils/api';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Package, Truck, CheckCircle, Clock, XCircle, MessageCircle } from 'lucide-react';
 import SupportChat from '../components/SupportChat';
 import OrderChat from '../components/OrderChat';
+
+const OrderSkeleton = () => (
+  <div style={{ background: '#fff', borderRadius: '12px', padding: '20px', border: '1px solid #E2E8F0' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+      <div>
+        <div style={{ width: '120px', height: '12px', background: '#F1F5F9', borderRadius: '6px', marginBottom: '8px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+        <div style={{ width: '80px', height: '12px', background: '#F1F5F9', borderRadius: '6px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+      </div>
+      <div style={{ width: '70px', height: '24px', background: '#F1F5F9', borderRadius: '20px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+    </div>
+    <div style={{ width: '60%', height: '12px', background: '#F1F5F9', borderRadius: '6px', marginBottom: '16px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+    <div style={{ display: 'flex', gap: '8px' }}>
+      <div style={{ width: '90px', height: '32px', background: '#F1F5F9', borderRadius: '8px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+      <div style={{ width: '70px', height: '32px', background: '#F1F5F9', borderRadius: '8px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+    </div>
+    <style>{`@keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:.4} }`}</style>
+  </div>
+);
 
 const STATUS_MAP = {
   pending:   { label: 'قيد الانتظار', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
@@ -34,8 +53,19 @@ const MyOrders = () => {
   }, [user, authLoading, navigate]);
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4338CA]"></div>
+    <div className="min-h-screen bg-[#F8F9FA]" style={{ direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif' }}>
+      <header className="bg-white border-b border-[#E2E8F0] py-4">
+        <div className="container mx-auto px-4 flex justify-between items-center">
+          <div>
+            <div style={{ width: '80px', height: '24px', background: '#F1F5F9', borderRadius: '8px', marginBottom: '6px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+            <div style={{ width: '50px', height: '14px', background: '#F1F5F9', borderRadius: '6px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+          </div>
+        </div>
+      </header>
+      <div className="container mx-auto px-4 py-8 max-w-3xl space-y-4">
+        {[1,2,3].map(i => <OrderSkeleton key={i} />)}
+      </div>
+      <style>{`@keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:.4} }`}</style>
     </div>
   );
 
@@ -64,11 +94,17 @@ const MyOrders = () => {
           </CardContent></Card>
         ) : (
           <div className="space-y-4">
-            {orders.map(order => {
+            {orders.map((order, idx) => {
               const s = STATUS_MAP[order.status] || STATUS_MAP.pending;
               const Icon = s.icon;
               return (
-                <Card key={order.order_id} className="hover:border-[#4338CA] transition-colors">
+                <motion.div
+                  key={order.order_id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.06, duration: 0.25 }}
+                >
+                <Card className="hover:border-[#4338CA] transition-colors hover:shadow-md">
                   <CardContent className="p-5">
                     <div className="flex justify-between items-start mb-3">
                       <div>
@@ -110,6 +146,7 @@ const MyOrders = () => {
                     </div>
                   </CardContent>
                 </Card>
+                </motion.div>
               );
             })}
           </div>
