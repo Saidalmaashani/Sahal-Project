@@ -45,9 +45,10 @@ SMTP_EMAIL     = os.environ.get('SMTP_EMAIL', '')
 SMTP_PASSWORD  = os.environ.get('SMTP_PASSWORD', '')
 
 # VAPID keys for Web Push Notifications
-VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
-VAPID_PUBLIC_KEY  = os.environ.get('VAPID_PUBLIC_KEY', '')
-VAPID_EMAIL       = os.environ.get('VAPID_EMAIL', 'mailto:admin@sahal.com')
+VAPID_PRIVATE_KEY  = os.environ.get('VAPID_PRIVATE_KEY', '')
+VAPID_PUBLIC_KEY   = os.environ.get('VAPID_PUBLIC_KEY', '')
+VAPID_EMAIL        = os.environ.get('VAPID_EMAIL', 'mailto:admin@sahal.com')
+ANTHROPIC_API_KEY  = os.environ.get('ANTHROPIC_API_KEY', '')
 
 PLATFORM_FEE = 0.07   # 7% إجمالي
 ADMIN_FEE    = 0.02   # 2% للمدير
@@ -1995,6 +1996,107 @@ async def get_analytics(authorization: Optional[str] = Header(None), request: Re
     }
 
 
+@api_router.get("/admin/analytics/charts")
+async def get_analytics_charts(authorization: Optional[str] = Header(None), request: Request = None):
+    user = await get_current_user(authorization, request)
+    if user["role"] not in ["admin", "merchant"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    is_merchant = user["role"] == "merchant"
+
+    # تصفية الطلبات حسب الدور
+    if is_merchant:
+        products = await db.products.find({"merchant_id": user["user_id"]}, {"_id": 0, "product_id": 1, "category": 1, "name": 1}).to_list(1000)
+        product_ids = {p["product_id"] for p in products}
+        all_paid = await db.orders.find({"payment_status": "paid"}, {"_id": 0}).to_list(2000)
+        paid_orders = [
+            o for o in all_paid
+            if any(i.get("product_id") in product_ids for i in o.get("items", []))
+        ]
+    else:
+        paid_orders = await db.orders.find({"payment_status": "paid"}, {"_id": 0}).to_list(2000)
+        all_orders  = await db.orders.find({}, {"_id": 0, "status": 1}).to_list(2000)
+
+    # 1. إيرادات آخر 6 أشهر
+    from collections import defaultdict
+    monthly: dict = defaultdict(lambda: {"revenue": 0.0, "orders": 0})
+    now = datetime.now(timezone.utc)
+    for o in paid_orders:
+        try:
+            dt = datetime.fromisoformat(o["created_at"].replace("Z", "+00:00"))
+            diff = (now.year - dt.year) * 12 + (now.month - dt.month)
+            if 0 <= diff < 6:
+                key = dt.strftime("%Y-%m")
+                monthly[key]["revenue"] += o.get("total_amount", 0)
+                monthly[key]["orders"]  += 1
+        except Exception:
+            pass
+
+    # أكمل الأشهر الفارغة
+    monthly_revenue = []
+    for i in range(5, -1, -1):
+        m = now.month - i
+        y = now.year
+        while m <= 0: m += 12; y -= 1
+        key = f"{y}-{m:02d}"
+        ar_months = ["يناير","فبراير","مارس","أبريل","مايو","يونيو",
+                     "يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"]
+        monthly_revenue.append({
+            "month": ar_months[m - 1],
+            "revenue": round(monthly[key]["revenue"], 3),
+            "orders":  monthly[key]["orders"],
+        })
+
+    # 2. توزيع الطلبات حسب الحالة (admin فقط)
+    status_dist = []
+    if not is_merchant:
+        from collections import Counter
+        counts = Counter(o["status"] for o in all_orders)
+        label_map = {"pending": "قيد الانتظار", "confirmed": "مؤكد",
+                     "shipped": "قيد التوصيل", "delivered": "تم التوصيل", "cancelled": "ملغى"}
+        colors = {"pending": "#F59E0B", "confirmed": "#4338CA",
+                  "shipped": "#7C3AED", "delivered": "#10B981", "cancelled": "#E11D48"}
+        status_dist = [
+            {"name": label_map.get(k, k), "value": v, "color": colors.get(k, "#94A3B8")}
+            for k, v in counts.items()
+        ]
+
+    # 3. أفضل الفئات
+    cat_revenue: dict = defaultdict(float)
+    for o in paid_orders:
+        for item in o.get("items", []):
+            cat = item.get("category", "أخرى")
+            cat_revenue[cat] += item.get("price", 0) * item.get("quantity", 1)
+    top_categories = sorted(
+        [{"category": k, "revenue": round(v, 3)} for k, v in cat_revenue.items()],
+        key=lambda x: x["revenue"], reverse=True
+    )[:6]
+
+    # 4. الطلبات اليومية — آخر 14 يوم
+    daily: dict = defaultdict(int)
+    cutoff = now - timedelta(days=14)
+    for o in paid_orders:
+        try:
+            dt = datetime.fromisoformat(o["created_at"].replace("Z", "+00:00"))
+            if dt >= cutoff:
+                daily[dt.strftime("%m/%d")] += 1
+        except Exception:
+            pass
+
+    daily_orders = []
+    for i in range(13, -1, -1):
+        d = now - timedelta(days=i)
+        key = d.strftime("%m/%d")
+        daily_orders.append({"day": key, "orders": daily.get(key, 0)})
+
+    return {
+        "monthly_revenue": monthly_revenue,
+        "status_distribution": status_dist,
+        "top_categories": top_categories,
+        "daily_orders": daily_orders,
+    }
+
+
 @api_router.get("/admin/stores")
 async def get_all_stores_admin(authorization: Optional[str] = Header(None), request: Request = None):
     user = await get_current_user(authorization, request)
@@ -2180,29 +2282,85 @@ async def send_chat_message(
 ):
     user = await get_current_user(authorization, request)
 
-    # ردود ذكية بسيطة — يمكن استبدالها بـ OpenAI API مباشرة لاحقاً
-    keywords = {
-        "السلام": "وعليكم السلام ورحمة الله! كيف يمكنني مساعدتك في سهل؟",
-        "مرحبا": "مرحباً بك في سهل! كيف يمكنني مساعدتك اليوم؟",
-        "طلب": "يمكنك مراجعة طلباتك من لوحة التحكم. هل تحتاج مساعدة في طلب معين؟",
-        "دفع": "ندعم الدفع بالبطاقة البنكية عبر Stripe. المدفوعات آمنة ومشفرة بالكامل.",
-        "توصيل": "يتم تخصيص مندوب توصيل تلقائياً بعد تأكيد الدفع. يمكنك تتبع طلبك من صفحة التتبع.",
-        "متجر": "لإنشاء متجر، سجّل كتاجر وأرسل طلب إنشاء متجر. سيراجعه الفريق خلال 24 ساعة.",
-        "كلمة المرور": "لاسترجاع كلمة المرور، تواصل مع الدعم عبر البريد الإلكتروني.",
-        "إحالة": "برنامج الإحالة يمنحك 10% من قيمة أول طلب لكل صديق تدعوه.",
-    }
-    response = next((v for k, v in keywords.items() if k in message),
-                    "شكراً لتواصلك مع سهل! سيتواصل معك فريق الدعم في أقرب وقت. 😊")
+    # جلب سياق المستخدم
+    orders = await db.orders.find(
+        {"user_id": user["user_id"]}, {"_id": 0}
+    ).sort("created_at", -1).limit(5).to_list(5)
+    recent_chat = await db.chat_messages.find(
+        {"user_id": user["user_id"]}, {"_id": 0, "message": 1, "response": 1}
+    ).sort("created_at", -1).limit(6).to_list(6)
+    recent_chat.reverse()
+
+    orders_summary = "\n".join(
+        f"- طلب #{o['order_id'][-8:]}: {o['status']} — {o['total_amount']:.3f} ر.ع"
+        for o in orders
+    ) or "لا توجد طلبات"
+
+    system_prompt = f"""أنت مساعد ذكاء اصطناعي متخصص لمنصة "سهل" للتجارة الإلكترونية العربية.
+تحدث دائماً باللغة العربية الفصحى البسيطة، وكن مختصراً ومفيداً.
+
+معلومات المستخدم الحالي:
+- الاسم: {user['name']}
+- الدور: {'مشتري' if user['role']=='shopper' else 'تاجر' if user['role']=='merchant' else 'مندوب' if user['role']=='driver' else 'مدير'}
+- البريد: {user['email']}
+
+آخر طلباته:
+{orders_summary}
+
+قواعد:
+- لا تخترع معلومات غير موجودة
+- إذا لم تعرف الإجابة قل ذلك بصراحة واقترح التواصل مع الدعم
+- ردودك لا تزيد عن 3-4 جمل إلا إذا تطلب السياق أكثر
+- يمكنك الإجابة عن: الطلبات، الدفع، التوصيل، المتاجر، المنتجات، الحساب، الإحالات"""
+
+    # بناء تاريخ المحادثة
+    history_messages = []
+    for turn in recent_chat:
+        history_messages.append({"role": "user", "content": turn["message"]})
+        history_messages.append({"role": "assistant", "content": turn["response"]})
+    history_messages.append({"role": "user", "content": message})
+
+    response_text = ""
+    if ANTHROPIC_API_KEY:
+        try:
+            import anthropic as _anthropic
+            client = _anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+            resp = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=512,
+                system=system_prompt,
+                messages=history_messages,
+            )
+            response_text = resp.content[0].text
+        except Exception as e:
+            logger.warning(f"Claude API error: {e}")
+            response_text = _fallback_response(message)
+    else:
+        response_text = _fallback_response(message)
 
     await db.chat_messages.insert_one({
         "message_id": f"msg_{uuid.uuid4().hex[:12]}",
         "user_id": user["user_id"],
         "message": message,
-        "response": response,
+        "response": response_text,
         "created_at": datetime.now(timezone.utc).isoformat()
     })
 
-    return {"response": response}
+    return {"response": response_text}
+
+
+def _fallback_response(message: str) -> str:
+    keywords = {
+        "السلام": "وعليكم السلام ورحمة الله! كيف يمكنني مساعدتك؟",
+        "مرحبا": "مرحباً بك في سهل! كيف يمكنني مساعدتك اليوم؟",
+        "طلب": "يمكنك مراجعة طلباتك من قسم 'طلباتي'. هل تحتاج مساعدة في طلب معين؟",
+        "دفع": "ندعم الدفع بالبطاقة البنكية عبر Stripe. المدفوعات آمنة ومشفرة.",
+        "توصيل": "يُخصَّص مندوب تلقائياً بعد تأكيد الدفع. تابع طلبك من صفحة التتبع.",
+        "متجر": "سجّل كتاجر وأرسل طلب إنشاء متجر. سيراجعه الفريق خلال 24 ساعة.",
+        "إحالة": "برنامج الإحالة يمنحك 10% من قيمة أول طلب لكل صديق تدعوه.",
+    }
+    return next((v for k, v in keywords.items() if k in message),
+                "شكراً لتواصلك مع سهل! سيتواصل معك فريق الدعم قريباً. 😊")
 
 
 @api_router.get("/chat/history")

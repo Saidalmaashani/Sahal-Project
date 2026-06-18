@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import SupportChat from '../components/SupportChat';
 import OrderChat from '../components/OrderChat';
+import AnalyticsCharts from '../components/AnalyticsCharts';
 
 const CATEGORIES = [
   'إلكترونيات', 'أزياء وملابس', 'منزل وحديقة', 'رياضة ولياقة',
@@ -597,9 +598,15 @@ const MerchantDashboard = () => {
         {store && (
           <Tabs defaultValue="products" className="space-y-4">
             <TabsList>
+              <TabsTrigger value="charts">📊 إحصائياتي</TabsTrigger>
               <TabsTrigger value="products">المنتجات ({products.length})</TabsTrigger>
               <TabsTrigger value="orders">الطلبات ({orders.length})</TabsTrigger>
             </TabsList>
+
+            {/* تبويب الإحصائيات */}
+            <TabsContent value="charts">
+              <AnalyticsCharts role="merchant" />
+            </TabsContent>
 
             {/* تبويب المنتجات */}
             <TabsContent value="products">

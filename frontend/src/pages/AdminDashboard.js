@@ -7,6 +7,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import AnalyticsCharts from '../components/AnalyticsCharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
@@ -445,12 +446,18 @@ const AdminDashboard = () => {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList>
+            <TabsTrigger value="charts">📊 الإحصائيات</TabsTrigger>
             <TabsTrigger value="users">المستخدمون ({users.length})</TabsTrigger>
             <TabsTrigger value="stores">المتاجر</TabsTrigger>
             <TabsTrigger value="orders">الطلبات</TabsTrigger>
             <TabsTrigger value="deliveries">التوصيلات</TabsTrigger>
             <TabsTrigger value="drivers">السائقون</TabsTrigger>
           </TabsList>
+
+          {/* ===== تبويب الإحصائيات ===== */}
+          <TabsContent value="charts">
+            <AnalyticsCharts role="admin" />
+          </TabsContent>
 
           {/* ===== تبويب المستخدمين ===== */}
           <TabsContent value="users">
