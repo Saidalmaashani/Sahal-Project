@@ -1783,6 +1783,155 @@ async def complete_delivery(order_id: str, authorization: Optional[str] = Header
         "/my-orders")
     return {"message": "تم التوصيل بنجاح"}
 
+
+# ==================== BARCODE DELIVERY CONFIRMATION ====================
+
+@api_router.post("/deliveries/{order_id}/generate-qr")
+async def generate_delivery_qr(
+    order_id: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None,
+):
+    """المندوب يُولّد رمز QR لتأكيد التسليم"""
+    user = await get_current_user(authorization, request)
+    if user["role"] != "driver":
+        raise HTTPException(status_code=403, detail="Drivers only")
+
+    driver = await db.delivery_drivers.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not driver:
+        raise HTTPException(status_code=404, detail="ملف المندوب غير موجود")
+
+    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="الطلب غير موجود")
+    if order.get("driver_id") != driver["driver_id"]:
+        raise HTTPException(status_code=403, detail="هذا الطلب ليس لك")
+    if order.get("status") != "shipped":
+        raise HTTPException(status_code=400, detail="الطلب ليس في حالة توصيل")
+
+    # إلغاء أي رمز قديم لنفس الطلب
+    await db.delivery_confirmations.delete_many({"order_id": order_id, "status": "pending"})
+
+    token = secrets.token_urlsafe(32)
+    expires = datetime.now(timezone.utc) + timedelta(minutes=30)
+
+    await db.delivery_confirmations.insert_one({
+        "token":      token,
+        "order_id":   order_id,
+        "driver_id":  driver["driver_id"],
+        "user_id":    order["user_id"],
+        "status":     "pending",
+        "expires_at": expires.isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+    confirm_url  = f"{frontend_url}/confirm-delivery/{token}"
+
+    return {
+        "token":       token,
+        "confirm_url": confirm_url,
+        "expires_at":  expires.isoformat(),
+        "order_id":    order_id,
+    }
+
+
+@api_router.get("/deliveries/confirm/{token}")
+async def get_confirmation_info(token: str):
+    """معلومات الطلب بالرمز — عام (لا يحتاج تسجيل دخول)"""
+    doc = await db.delivery_confirmations.find_one({"token": token}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="رمز غير صالح")
+    if doc["status"] == "confirmed":
+        return {"status": "confirmed", "order_id": doc["order_id"]}
+    if datetime.fromisoformat(doc["expires_at"]) < datetime.now(timezone.utc):
+        raise HTTPException(status_code=410, detail="انتهت صلاحية الرمز")
+
+    order = await db.orders.find_one({"order_id": doc["order_id"]}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="الطلب غير موجود")
+
+    driver = await db.delivery_drivers.find_one({"driver_id": doc["driver_id"]}, {"_id": 0})
+    driver_user = await db.users.find_one({"user_id": driver["user_id"]}, {"_id": 0}) if driver else None
+
+    return {
+        "status":           "pending",
+        "order_id":         doc["order_id"],
+        "total_amount":     order.get("total_amount"),
+        "delivery_address": order.get("delivery_address"),
+        "items":            order.get("items", []),
+        "driver_name":      driver_user.get("name") if driver_user else None,
+        "driver_phone":     driver_user.get("phone") if driver_user else None,
+        "expires_at":       doc["expires_at"],
+        "customer_user_id": doc["user_id"],
+    }
+
+
+@api_router.post("/deliveries/confirm/{token}")
+async def confirm_delivery_by_qr(
+    token: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None,
+):
+    """الزبون يؤكد الاستلام"""
+    user = await get_current_user(authorization, request)
+
+    doc = await db.delivery_confirmations.find_one({"token": token}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="رمز غير صالح")
+    if doc["status"] == "confirmed":
+        raise HTTPException(status_code=400, detail="تم التأكيد مسبقاً")
+    if datetime.fromisoformat(doc["expires_at"]) < datetime.now(timezone.utc):
+        raise HTTPException(status_code=410, detail="انتهت صلاحية الرمز")
+
+    # التحقق أن المستخدم هو صاحب الطلب
+    if doc["user_id"] != user["user_id"] and user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="هذا الطلب ليس لك")
+
+    now = datetime.now(timezone.utc).isoformat()
+
+    # تحديث الطلب → مُسلَّم
+    await db.orders.update_one(
+        {"order_id": doc["order_id"]},
+        {"$set": {"status": "delivered", "updated_at": now}}
+    )
+
+    # تحديث السائق → متاح
+    await db.delivery_drivers.update_one(
+        {"driver_id": doc["driver_id"]},
+        {"$set": {"is_available": True}}
+    )
+
+    # تحديث رمز التأكيد
+    await db.delivery_confirmations.update_one(
+        {"token": token},
+        {"$set": {"status": "confirmed", "confirmed_at": now, "confirmed_by": user["user_id"]}}
+    )
+
+    # إشعار للزبون والمندوب
+    await _create_notification(doc["user_id"], "order_delivered",
+        "تم تأكيد استلامك للطلب ✅",
+        f"طلبك #{doc['order_id'][-8:]} أُكِّد استلامه بتوقيعك الرقمي",
+        "/my-orders")
+
+    driver = await db.delivery_drivers.find_one({"driver_id": doc["driver_id"]}, {"_id": 0})
+    if driver:
+        await _create_notification(driver["user_id"], "order_delivered",
+            "أكّد الزبون الاستلام! 🎉",
+            f"طلب #{doc['order_id'][-8:]} تم تأكيده من الزبون",
+            "/driver/dashboard")
+
+    # بث WebSocket
+    await ws_manager.broadcast_notification(doc["user_id"], {
+        "notification_id": f"notif_{uuid.uuid4().hex[:8]}",
+        "type": "order_delivered", "is_read": False,
+        "title": "تم تأكيد الاستلام ✅",
+        "message": f"طلب #{doc['order_id'][-8:]}",
+        "link": "/my-orders", "created_at": now,
+    })
+
+    return {"message": "تم تأكيد الاستلام بنجاح", "order_id": doc["order_id"]}
+
 @api_router.post("/deliveries/{order_id}/accept")
 async def accept_delivery(order_id: str, authorization: Optional[str] = Header(None), request: Request = None):
     """المندوب يقبل طلب توصيل تلقائياً"""

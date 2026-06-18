@@ -30,6 +30,7 @@ import CustomerProfile from './pages/CustomerProfile';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import WishlistPage from './pages/WishlistPage';
+import DeliveryConfirmPage from './pages/DeliveryConfirmPage';
 
 const pageVariants = {
   initial: { opacity: 0, y: 10 },
@@ -76,6 +77,7 @@ function AnimatedRoutes() {
         <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
         <Route path="/reset-password" element={<PageWrapper><ResetPassword /></PageWrapper>} />
         <Route path="/wishlist" element={<PageWrapper><WishlistPage /></PageWrapper>} />
+        <Route path="/confirm-delivery/:token" element={<DeliveryConfirmPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>

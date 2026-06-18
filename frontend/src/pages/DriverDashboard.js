@@ -13,12 +13,13 @@ import { toast } from "sonner";
 import {
   Truck, Package, ArrowRight, Navigation, MapPin, CheckCircle,
   Phone, MessageCircle, DollarSign, Calendar, ChevronDown, ChevronUp,
-  ExternalLink, Zap, Star, Clock, TrendingUp, Map,
+  ExternalLink, Zap, Star, Clock, TrendingUp, Map, QrCode,
 } from "lucide-react";
 import SupportChat from "../components/SupportChat";
 import MapTrack from "../components/MapTrack";
 import OrderChat from "../components/OrderChat";
 import ThemeToggle from "../components/ThemeToggle";
+import QRConfirmModal from "../components/QRConfirmModal";
 
 /* ─── helpers ─── */
 const haversine = (lat1, lng1, lat2, lng2) => {
@@ -37,7 +38,7 @@ const STATUS_AR = { pending: "قيد الانتظار", confirmed: "مؤكد", s
 const STATUS_COLOR = { confirmed: ["#1D4ED8", "#DBEAFE"], shipped: ["#D97706", "#FEF3C7"], delivered: ["#059669", "#D1FAE5"], cancelled: ["#DC2626", "#FEE2E2"] };
 
 /* ─── بطاقة الطلب ─── */
-const OrderCard = ({ order, showAccept, myLocation, onAccept, onComplete, onChat, t }) => {
+const OrderCard = ({ order, showAccept, myLocation, onAccept, onComplete, onChat, onQR, t }) => {
   const [expanded, setExpanded] = useState(false);
   const distMerchant = haversine(myLocation?.lat, myLocation?.lng, order.merchant_lat, order.merchant_lng);
   const distCustomer = haversine(myLocation?.lat, myLocation?.lng, order.delivery_lat, order.delivery_lng);
@@ -135,6 +136,15 @@ const OrderCard = ({ order, showAccept, myLocation, onAccept, onComplete, onChat
             style={{ padding: "9px 12px", borderRadius: 10, border: `1.5px solid #7C3AED`, background: "transparent", color: "#7C3AED", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontFamily: "Tajawal,sans-serif", fontWeight: 600 }}>
             <MessageCircle style={{ width: 14, height: 14 }} />دردشة
           </motion.button>
+
+          {/* زر QR — فقط للطلبات النشطة */}
+          {order.status === "shipped" && (
+            <motion.button whileTap={{ scale: 0.96 }} whileHover={{ scale: 1.04 }}
+              onClick={() => onQR(order)}
+              style={{ padding: "9px 14px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#10B981,#059669)", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontFamily: "Tajawal,sans-serif", fontWeight: 700, boxShadow: "0 4px 12px rgba(16,185,129,0.35)" }}>
+              <QrCode style={{ width: 15, height: 15 }} />تأكيد التسليم
+            </motion.button>
+          )}
         </div>
       </div>
 
@@ -195,6 +205,7 @@ const DriverDashboard = () => {
   const [phoneInput, setPhoneInput]       = useState("");
   const [savingPhone, setSavingPhone]     = useState(false);
   const [chatOrder, setChatOrder]         = useState(null);
+  const [qrOrder, setQrOrder]             = useState(null);
   const watchRef = useRef(null);
 
   useEffect(() => {
@@ -452,21 +463,21 @@ const DriverDashboard = () => {
                   )}
                   {sortedAvailable.length === 0
                     ? <p style={{ textAlign: "center", color: t.muted, padding: "32px 0" }}>لا توجد طلبات متاحة حالياً</p>
-                    : sortedAvailable.map(d => <OrderCard key={d.order_id} order={d} showAccept t={t} myLocation={myLocation} onAccept={acceptDelivery} onComplete={completeDelivery} onChat={setChatOrder} />)}
+                    : sortedAvailable.map(d => <OrderCard key={d.order_id} order={d} showAccept t={t} myLocation={myLocation} onAccept={acceptDelivery} onComplete={completeDelivery} onChat={setChatOrder} onQR={setQrOrder} />)}
                 </motion.div>
               )}
               {activeTab === "active" && (
                 <motion.div key="active" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                   {active.length === 0
                     ? <p style={{ textAlign: "center", color: t.muted, padding: "32px 0" }}>لا توجد طلبات نشطة</p>
-                    : active.map(d => <OrderCard key={d.order_id} order={d} showAccept={false} t={t} myLocation={myLocation} onAccept={acceptDelivery} onComplete={completeDelivery} onChat={setChatOrder} />)}
+                    : active.map(d => <OrderCard key={d.order_id} order={d} showAccept={false} t={t} myLocation={myLocation} onAccept={acceptDelivery} onComplete={completeDelivery} onChat={setChatOrder} onQR={setQrOrder} />)}
                 </motion.div>
               )}
               {activeTab === "completed" && (
                 <motion.div key="comp" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                   {completed.length === 0
                     ? <p style={{ textAlign: "center", color: t.muted, padding: "32px 0" }}>لا توجد توصيلات مكتملة بعد</p>
-                    : completed.map(d => <OrderCard key={d.order_id} order={d} showAccept={false} t={t} myLocation={myLocation} onAccept={acceptDelivery} onComplete={completeDelivery} onChat={setChatOrder} />)}
+                    : completed.map(d => <OrderCard key={d.order_id} order={d} showAccept={false} t={t} myLocation={myLocation} onAccept={acceptDelivery} onComplete={completeDelivery} onChat={setChatOrder} onQR={setQrOrder} />)}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -478,6 +489,17 @@ const DriverDashboard = () => {
       <AnimatePresence>
         {chatOrder && (
           <OrderChat orderId={chatOrder.order_id} orderLabel={chatOrder.order_id.slice(-8)} onClose={() => setChatOrder(null)} />
+        )}
+      </AnimatePresence>
+
+      {/* QR Confirm modal */}
+      <AnimatePresence>
+        {qrOrder && (
+          <QRConfirmModal
+            order={qrOrder}
+            onClose={() => setQrOrder(null)}
+            onConfirmed={() => { setQrOrder(null); fetchData(); toast.success("أكّد الزبون الاستلام! 🎉"); }}
+          />
         )}
       </AnimatePresence>
 
