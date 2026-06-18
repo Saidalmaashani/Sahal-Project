@@ -5,12 +5,16 @@ import api from '../utils/api';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRight, ShoppingCart, Store, Package,
   Tag, Layers, Weight, CheckCircle, AlertCircle,
-  Minus, Plus, Share2
+  Minus, Plus, Share2, Star, MessageSquare
 } from 'lucide-react';
 import SupportChat from '../components/SupportChat';
+import ReviewList from '../components/ReviewList';
+import ReviewForm from '../components/ReviewForm';
+import { StarDisplay } from '../components/StarRating';
 
 const PLACEHOLDER = 'https://images.pexels.com/photos/17938771/pexels-photo-17938771.jpeg';
 
@@ -24,6 +28,10 @@ const ProductDetail = () => {
   const [quantity, setQuantity]     = useState(1);
   const [adding, setAdding]         = useState(false);
   const [store, setStore]           = useState(null);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRefresh, setReviewRefresh]   = useState(0);
+  const [canReview, setCanReview]           = useState(false);
+  const [hasReviewed, setHasReviewed]       = useState(false);
 
   useEffect(() => { fetchProduct(); }, [id]);
 
@@ -31,7 +39,6 @@ const ProductDetail = () => {
     try {
       const r = await api.get(`/products/${id}`);
       setProduct(r.data);
-      // جلب بيانات المتجر
       if (r.data.store_id) {
         try {
           const stores = await api.get('/stores');
@@ -44,6 +51,22 @@ const ProductDetail = () => {
       navigate('/shop');
     } finally { setLoading(false); }
   };
+
+  // تحقق إذا كان المستخدم يستطيع التقييم
+  useEffect(() => {
+    if (!user || user.role !== 'shopper') return;
+    Promise.all([
+      api.get('/orders').catch(() => ({ data: [] })),
+      api.get('/users/my-reviews').catch(() => ({ data: [] })),
+    ]).then(([ordersRes, reviewsRes]) => {
+      const delivered = ordersRes.data.some(o =>
+        o.status === 'delivered' && o.items?.some(i => i.product_id === id)
+      );
+      const already = reviewsRes.data.some(r => r.product_id === id);
+      setCanReview(delivered && !already);
+      setHasReviewed(already);
+    });
+  }, [user, id, reviewRefresh]);
 
   const addToCart = async () => {
     if (!user) { toast.error('سجّل دخول أولاً'); navigate('/login'); return; }
@@ -151,9 +174,9 @@ const ProductDetail = () => {
               <p style={{ fontSize: '32px', fontWeight: 800, color: '#4338CA' }}>
                 ر.ع {product.price.toFixed(3)}
               </p>
-              <p style={{ fontSize: '12px', color: '#475569', marginTop: '4px' }}>
-                شامل رسوم التوصيل والمنصة
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
+                <StarDisplay value={product.average_rating || 0} count={product.review_count || 0} size={16} />
+              </div>
             </div>
 
             {/* حالة المخزون */}
@@ -276,6 +299,81 @@ const ProductDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* ===== قسم التقييمات ===== */}
+      <div className="container mx-auto px-4 pb-12" style={{ maxWidth: '900px' }}>
+        <div style={{
+          background: '#fff', borderRadius: '20px', padding: '28px',
+          border: '1px solid #E2E8F0', boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+        }}>
+          {/* Header القسم */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg,#F59E0B,#F97316)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Star style={{ width: '18px', height: '18px', color: '#fff', fill: '#fff' }} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', margin: 0 }}>آراء المشترين</h2>
+                {product.review_count > 0 && (
+                  <p style={{ fontSize: '12px', color: '#64748B', margin: 0 }}>
+                    {product.review_count} تقييم · متوسط {product.average_rating?.toFixed(1)} من 5
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* زر التقييم */}
+            {user?.role === 'shopper' && (
+              <div>
+                {hasReviewed ? (
+                  <span style={{ fontSize: '13px', color: '#10B981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <CheckCircle style={{ width: 15, height: 15 }} /> قيّمت هذا المنتج
+                  </span>
+                ) : canReview ? (
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setShowReviewForm(true)}
+                    style={{
+                      padding: '9px 18px', borderRadius: '12px', border: 'none',
+                      background: 'linear-gradient(135deg,#F59E0B,#F97316)',
+                      color: '#fff', fontFamily: 'Tajawal,sans-serif', fontWeight: 700,
+                      fontSize: '14px', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                    }}
+                  >
+                    <Star style={{ width: 15, height: 15, fill: '#fff' }} />
+                    اكتب تقييماً
+                  </motion.button>
+                ) : (
+                  <span style={{ fontSize: '12px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <MessageSquare style={{ width: 14, height: 14 }} />
+                    يتاح التقييم بعد الاستلام
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          <ReviewList productId={id} refreshTrigger={reviewRefresh} />
+        </div>
+      </div>
+
+      {/* نموذج التقييم */}
+      <AnimatePresence>
+        {showReviewForm && (
+          <ReviewForm
+            productId={id}
+            productName={product.name}
+            onClose={() => setShowReviewForm(false)}
+            onSubmitted={() => {
+              setReviewRefresh(r => r + 1);
+              setShowReviewForm(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       <SupportChat />
     </div>
   );

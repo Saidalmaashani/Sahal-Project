@@ -218,6 +218,21 @@ class ProductCreate(BaseModel):
     images: List[str] = []
 
 
+class Review(BaseModel):
+    review_id: str
+    product_id: str
+    user_id: str
+    user_name: str
+    rating: int          # 1-5
+    comment: str
+    created_at: str
+
+
+class ReviewCreate(BaseModel):
+    rating: int
+    comment: str
+
+
 class CartItem(BaseModel):
     cart_item_id: str
     user_id: str
@@ -887,6 +902,113 @@ async def get_product(product_id: str):
     if not product:
         raise HTTPException(status_code=404, detail="المنتج غير موجود")
     return product
+
+
+# ==================== REVIEWS ENDPOINTS ====================
+
+@api_router.post("/products/{product_id}/reviews")
+async def add_review(
+    product_id: str,
+    payload: ReviewCreate,
+    authorization: Optional[str] = Header(None),
+    request: Request = None,
+):
+    user = await get_current_user(authorization, request)
+    if user["role"] not in ("shopper", "admin"):
+        raise HTTPException(status_code=403, detail="فقط المشترون يمكنهم التقييم")
+
+    if not (1 <= payload.rating <= 5):
+        raise HTTPException(status_code=400, detail="التقييم يجب أن يكون بين 1 و5")
+
+    product = await db.products.find_one({"product_id": product_id}, {"_id": 0})
+    if not product:
+        raise HTTPException(status_code=404, detail="المنتج غير موجود")
+
+    # تحقق أن المستخدم اشترى هذا المنتج فعلاً وتم التوصيل
+    delivered_order = await db.orders.find_one({
+        "user_id": user["user_id"],
+        "status": "delivered",
+        "items.product_id": product_id,
+    }, {"_id": 0})
+    if not delivered_order and user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="يمكنك التقييم فقط بعد استلام الطلب")
+
+    # منع التقييم المكرر
+    existing = await db.reviews.find_one({"product_id": product_id, "user_id": user["user_id"]})
+    if existing:
+        raise HTTPException(status_code=400, detail="قيّمت هذا المنتج مسبقاً")
+
+    review_id = f"rev_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc).isoformat()
+    await db.reviews.insert_one({
+        "review_id": review_id,
+        "product_id": product_id,
+        "user_id": user["user_id"],
+        "user_name": user["name"],
+        "rating": payload.rating,
+        "comment": payload.comment.strip(),
+        "created_at": now,
+    })
+
+    # تحديث متوسط التقييم على المنتج
+    await _update_product_rating(product_id)
+
+    return {"review_id": review_id, "created_at": now}
+
+
+@api_router.get("/products/{product_id}/reviews")
+async def get_reviews(product_id: str):
+    reviews = await db.reviews.find(
+        {"product_id": product_id}, {"_id": 0}
+    ).sort("created_at", -1).to_list(200)
+    return reviews
+
+
+@api_router.delete("/reviews/{review_id}")
+async def delete_review(
+    review_id: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None,
+):
+    user = await get_current_user(authorization, request)
+    review = await db.reviews.find_one({"review_id": review_id}, {"_id": 0})
+    if not review:
+        raise HTTPException(status_code=404, detail="التقييم غير موجود")
+    if review["user_id"] != user["user_id"] and user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="غير مصرح")
+
+    product_id = review["product_id"]
+    await db.reviews.delete_one({"review_id": review_id})
+    await _update_product_rating(product_id)
+    return {"message": "تم حذف التقييم"}
+
+
+@api_router.get("/products/{product_id}/rating")
+async def get_product_rating(product_id: str):
+    reviews = await db.reviews.find({"product_id": product_id}, {"_id": 0, "rating": 1}).to_list(1000)
+    count = len(reviews)
+    avg = round(sum(r["rating"] for r in reviews) / count, 1) if count else 0
+    dist = {str(i): sum(1 for r in reviews if r["rating"] == i) for i in range(1, 6)}
+    return {"average": avg, "count": count, "distribution": dist}
+
+
+@api_router.get("/users/my-reviews")
+async def my_reviews(authorization: Optional[str] = Header(None), request: Request = None):
+    user = await get_current_user(authorization, request)
+    reviews = await db.reviews.find(
+        {"user_id": user["user_id"]}, {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return reviews
+
+
+async def _update_product_rating(product_id: str):
+    reviews = await db.reviews.find({"product_id": product_id}, {"_id": 0, "rating": 1}).to_list(1000)
+    count = len(reviews)
+    avg = round(sum(r["rating"] for r in reviews) / count, 1) if count else 0
+    await db.products.update_one(
+        {"product_id": product_id},
+        {"$set": {"average_rating": avg, "review_count": count}},
+    )
 
 
 # ==================== CART ENDPOINTS ====================

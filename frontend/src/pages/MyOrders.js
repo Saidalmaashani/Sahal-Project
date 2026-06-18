@@ -6,9 +6,10 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Package, Truck, CheckCircle, Clock, XCircle, MessageCircle } from 'lucide-react';
+import { ArrowRight, Package, Truck, CheckCircle, Clock, XCircle, MessageCircle, Star } from 'lucide-react';
 import SupportChat from '../components/SupportChat';
 import OrderChat from '../components/OrderChat';
+import ReviewForm from '../components/ReviewForm';
 
 const OrderSkeleton = () => (
   <div style={{ background: '#fff', borderRadius: '12px', padding: '20px', border: '1px solid #E2E8F0' }}>
@@ -41,7 +42,14 @@ const MyOrders = () => {
   const { user, loading: authLoading } = useAuth();
   const [orders, setOrders]     = useState([]);
   const [loading, setLoading]   = useState(true);
-  const [chatOrder, setChatOrder] = useState(null);
+  const [chatOrder, setChatOrder]       = useState(null);
+  const [reviewOrder, setReviewOrder]   = useState(null); // {order_id, product_id, product_name}
+  const [myReviews, setMyReviews]       = useState([]);
+
+  useEffect(() => {
+    if (!user) return;
+    api.get('/users/my-reviews').then(r => setMyReviews(r.data)).catch(() => {});
+  }, [user]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -143,6 +151,32 @@ const MyOrders = () => {
                           <MessageCircle className="h-4 w-4 ml-2" />محادثة
                         </Button>
                       )}
+                      {/* زر التقييم — للطلبات المُسلَّمة فقط */}
+                      {order.status === 'delivered' && order.items?.map(item => {
+                        const alreadyReviewed = myReviews.some(r => r.product_id === item.product_id);
+                        if (alreadyReviewed) return null;
+                        return (
+                          <motion.button
+                            key={item.product_id}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setReviewOrder({
+                              order_id: order.order_id,
+                              product_id: item.product_id,
+                              product_name: item.name || item.product_id,
+                            })}
+                            style={{
+                              padding: '6px 12px', borderRadius: '8px', border: 'none',
+                              background: 'linear-gradient(135deg,#F59E0B,#F97316)',
+                              color: '#fff', fontFamily: 'Tajawal,sans-serif', fontWeight: 700,
+                              fontSize: '12px', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', gap: '4px',
+                            }}
+                          >
+                            <Star style={{ width: 12, height: 12, fill: '#fff' }} />
+                            قيّم
+                          </motion.button>
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>
@@ -159,6 +193,20 @@ const MyOrders = () => {
           onClose={() => setChatOrder(null)}
         />
       )}
+      <AnimatePresence>
+        {reviewOrder && (
+          <ReviewForm
+            productId={reviewOrder.product_id}
+            productName={reviewOrder.product_name}
+            onClose={() => setReviewOrder(null)}
+            onSubmitted={() => {
+              setReviewOrder(null);
+              api.get('/users/my-reviews').then(r => setMyReviews(r.data)).catch(() => {});
+              toast.success('شكراً على تقييمك!');
+            }}
+          />
+        )}
+      </AnimatePresence>
       <SupportChat />
     </div>
   );
