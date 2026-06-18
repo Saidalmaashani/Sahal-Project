@@ -1,10 +1,10 @@
 services:
   # ==================== Backend ====================
   - type: web
-    name: sahal-backend
+    name: Sahal-Project
     runtime: python
     rootDir: backend
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install fastapi uvicorn motor pymongo[srv] pyjwt bcrypt httpx python-dotenv pydantic python-multipart pywebpush anthropic
     startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
     plan: free
     envVars:
@@ -29,19 +29,21 @@ services:
       - key: VAPID_EMAIL
         sync: false
       - key: BACKEND_URL
-        value: https://sahal-backend.onrender.com
+        value: https://sahal-project.onrender.com
       - key: FRONTEND_URL
         value: https://sahal-frontend.onrender.com
       - key: SMTP_EMAIL
         sync: false
       - key: SMTP_PASSWORD
         sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
       - key: PORT
         value: "10000"
 
   # ==================== Frontend ====================
   - type: web
-    name: sahal-frontend
+    name: Sahal-frontend
     runtime: node
     rootDir: frontend
     buildCommand: npm install && npm run build
@@ -49,7 +51,7 @@ services:
     plan: free
     envVars:
       - key: REACT_APP_BACKEND_URL
-        value: https://sahal-backend.onrender.com
+        value: https://sahal-project.onrender.com
       - key: REACT_APP_GOOGLE_CLIENT_ID
         sync: false
       - key: NODE_VERSION
