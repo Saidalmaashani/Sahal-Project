@@ -1,3 +1,93 @@
+/* ===== CSS Variables — Light / Dark ===== */
+:root {
+  --bg:       #FFFFFF;
+  --bg2:      #F8F9FA;
+  --bg3:      #F1F5F9;
+  --card:     #FFFFFF;
+  --text:     #0F172A;
+  --text2:    #475569;
+  --muted:    #94A3B8;
+  --border:   #E2E8F0;
+  --border2:  #F1F5F9;
+  --input-bg: #FFFFFF;
+}
+
+html.dark {
+  --bg:       #0F172A;
+  --bg2:      #1E293B;
+  --bg3:      #334155;
+  --card:     #1E293B;
+  --text:     #F1F5F9;
+  --text2:    #94A3B8;
+  --muted:    #64748B;
+  --border:   #334155;
+  --border2:  #1E293B;
+  --input-bg: #1E293B;
+}
+
+/* ===== Dark mode: body & basic elements ===== */
+html.dark body {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+/* ===== Tailwind class overrides ===== */
+html.dark .bg-white            { background-color: var(--card)  !important; }
+html.dark .bg-\[#F8F9FA\]     { background-color: var(--bg2)   !important; }
+html.dark .bg-\[#F8F9FA\]     { background-color: var(--bg2)   !important; }
+html.dark .bg-\[#F1F5F9\]     { background-color: var(--bg3)   !important; }
+html.dark .bg-\[#F8FAFC\]     { background-color: var(--bg2)   !important; }
+html.dark .bg-\[#FAFAFA\]     { background-color: var(--bg2)   !important; }
+html.dark .min-h-screen        { background-color: var(--bg)    !important; }
+
+html.dark .border-\[#E2E8F0\] { border-color: var(--border)  !important; }
+html.dark .border-\[#F1F5F9\] { border-color: var(--border2) !important; }
+html.dark .border-b            { border-color: var(--border)  !important; }
+html.dark .border-t            { border-color: var(--border)  !important; }
+html.dark .border              { border-color: var(--border)  !important; }
+
+html.dark .text-\[#0F172A\]   { color: var(--text)  !important; }
+html.dark .text-\[#1E293B\]   { color: var(--text)  !important; }
+html.dark .text-\[#475569\]   { color: var(--text2) !important; }
+html.dark .text-\[#64748B\]   { color: var(--text2) !important; }
+html.dark .text-\[#94A3B8\]   { color: var(--muted) !important; }
+
+html.dark .text-slate-700      { color: var(--text2) !important; }
+html.dark .text-slate-500      { color: var(--muted) !important; }
+
+/* shadcn Card */
+html.dark [class*="rounded-lg"] > *:not([class*="bg-\[#4338"]):not([class*="bg-\[#F9"]):not([class*="bg-\[#10"]):not([class*="bg-\[#7C"]):not([class*="bg-\[#E1"]) {}
+
+/* shadcn input/textarea */
+html.dark input:not([type="range"]),
+html.dark textarea,
+html.dark select {
+  background-color: var(--input-bg) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+/* shadcn Dialog */
+html.dark [role="dialog"] > div { background-color: var(--card) !important; }
+
+/* Table */
+html.dark th { background-color: var(--bg2) !important; color: var(--text2) !important; }
+html.dark td { color: var(--text) !important; border-color: var(--border2) !important; }
+html.dark tr:hover td { background-color: var(--bg2) !important; }
+
+/* Tabs */
+html.dark [role="tablist"]     { background-color: var(--bg2) !important; }
+html.dark [role="tab"]         { color: var(--text2) !important; }
+html.dark [data-state="active"] { background-color: var(--card) !important; color: var(--text) !important; }
+
+/* Card — شادكن */
+html.dark .card,
+html.dark [class*="Card"]      { background-color: var(--card) !important; border-color: var(--border) !important; }
+
+/* Scrollbar dark mode */
+html.dark ::-webkit-scrollbar       { background: var(--bg2); }
+html.dark ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 8px; }
+
 /* Sahal Styles */
 .hero-section {
   background: linear-gradient(135deg, rgba(67, 56, 202, 0.05) 0%, rgba(249, 115, 22, 0.05) 100%);
@@ -38,6 +128,11 @@
   backdrop-filter: blur(16px);
   background: rgba(255, 255, 255, 0.7);
   border-bottom: 1px solid rgba(226, 232, 240, 0.4);
+}
+
+html.dark .header-glass {
+  background: rgba(15, 23, 42, 0.88) !important;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.6) !important;
 }
 
 .bento-grid {

@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { WishlistProvider } from './contexts/WishlistContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { Toaster } from './components/ui/sonner';
 import PushPrompt from './components/PushPrompt';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -83,15 +84,17 @@ function AnimatedRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <WishlistProvider>
-        <BrowserRouter>
-          <AnimatedRoutes />
-          <Toaster position="top-right" />
-          <PushPrompt />
-        </BrowserRouter>
-      </WishlistProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <WishlistProvider>
+          <BrowserRouter>
+            <AnimatedRoutes />
+            <Toaster position="top-right" />
+            <PushPrompt />
+          </BrowserRouter>
+        </WishlistProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

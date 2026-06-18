@@ -14,7 +14,9 @@ import SupportChat from '../components/SupportChat';
 import SearchAutocomplete from '../components/SearchAutocomplete';
 import FilterPanel from '../components/FilterPanel';
 import WishlistButton from '../components/WishlistButton';
+import ThemeToggle from '../components/ThemeToggle';
 import { StarDisplay } from '../components/StarRating';
+import { useT } from '../contexts/ThemeContext';
 
 const ProductSkeleton = () => (
   <div style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E2E8F0' }}>
@@ -267,6 +269,8 @@ const Shop = () => {
 
   const handleLogout = async () => { await logout(); navigate('/'); };
 
+  const t = useT();
+
   const getDashboardPath = () => {
     if (user?.role === 'admin') return '/admin/dashboard';
     if (user?.role === 'merchant') return '/merchant/dashboard';
@@ -275,7 +279,7 @@ const Shop = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA]" style={{ direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: t.bg2, direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif' }}>
 
       {/* Header */}
       <header className="header-glass sticky top-0 z-50">
@@ -292,12 +296,13 @@ const Shop = () => {
             </div>
 
             <div className="flex items-center gap-2">
+              <ThemeToggle size="sm" />
               {user && (
                 <>
                   <NotificationBell />
                   <button
                     onClick={() => navigate('/cart')}
-                    style={{ padding: '8px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#fff', cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ padding: '8px', border: `1px solid ${t.border}`, borderRadius: '8px', background: t.card, cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     <ShoppingCart style={{ width: 20, height: 20, color: '#4338CA' }} />
                   </button>
@@ -380,7 +385,7 @@ const Shop = () => {
       </header>
 
       {/* شريط البحث المتقدم */}
-      <div className="bg-white border-b border-[#E2E8F0] py-4">
+      <div style={{ background: t.card, borderBottom: `1px solid ${t.border}`, padding: '16px 0' }}>
         <div className="container mx-auto px-4 space-y-3">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">

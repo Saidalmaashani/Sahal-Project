@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Send, Sparkles, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useT } from '../contexts/ThemeContext';
 import api from '../utils/api';
 
 const SUGGESTIONS = [
@@ -26,6 +27,7 @@ const TypingDots = () => (
 
 const SupportChat = () => {
   const { user } = useAuth();
+  const t = useT();
   const [open, setOpen]         = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput]       = useState('');
@@ -124,9 +126,9 @@ const SupportChat = () => {
               bottom: 'calc(max(1.5rem, env(safe-area-inset-bottom)) + 68px)',
               maxWidth: 400, margin: '0 auto',
               height: 'min(520px, calc(100svh - 160px))',
-              background: '#fff', borderRadius: 20,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
-              border: '1px solid #E2E8F0',
+              background: t.card, borderRadius: 20,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+              border: `1px solid ${t.border}`,
               display: 'flex', flexDirection: 'column',
               overflow: 'hidden',
               direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif',
@@ -150,7 +152,7 @@ const SupportChat = () => {
             </div>
 
             {/* رسائل */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: 10, background: t.bg2 }}>
               <AnimatePresence initial={false}>
                 {messages.map(msg => {
                   const isUser = msg.role === 'user';
@@ -164,8 +166,8 @@ const SupportChat = () => {
                       <div style={{
                         maxWidth: '82%', padding: '10px 14px',
                         borderRadius: isUser ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
-                        background: isUser ? '#4338CA' : '#F1F5F9',
-                        color: isUser ? '#fff' : '#0F172A',
+                        background: isUser ? '#4338CA' : t.bg3,
+                        color: isUser ? '#fff' : t.text,
                         fontSize: 14, lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                       }}>
                         {msg.text}
@@ -207,7 +209,7 @@ const SupportChat = () => {
             </div>
 
             {/* حقل الإدخال */}
-            <div style={{ padding: '10px 12px', borderTop: '1px solid #F1F5F9', display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+            <div style={{ padding: '10px 12px', borderTop: `1px solid ${t.border}`, background: t.card, display: 'flex', gap: 8, alignItems: 'flex-end' }}>
               <textarea
                 ref={inputRef}
                 value={input}
@@ -217,13 +219,14 @@ const SupportChat = () => {
                 rows={1}
                 disabled={loading}
                 style={{
-                  flex: 1, padding: '9px 12px', border: '1.5px solid #E2E8F0',
+                  flex: 1, padding: '9px 12px', border: `1.5px solid ${t.border}`,
                   borderRadius: 12, fontSize: 14, fontFamily: 'Tajawal,sans-serif',
                   resize: 'none', outline: 'none', maxHeight: 80, overflow: 'auto',
-                  lineHeight: 1.5, transition: 'border-color 0.2s', color: '#0F172A',
+                  lineHeight: 1.5, transition: 'border-color 0.2s', color: t.text,
+                  background: t.inputBg,
                 }}
                 onFocus={e => e.target.style.borderColor = '#4338CA'}
-                onBlur={e => e.target.style.borderColor = '#E2E8F0'}
+                onBlur={e => e.target.style.borderColor = t.border}
               />
               <motion.button
                 whileTap={{ scale: 0.9 }}

@@ -4,12 +4,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { useT } from '../contexts/ThemeContext';
 
 const ROLE_LABELS = { shopper: 'زبون', merchant: 'تاجر', driver: 'مندوب', admin: 'مدير' };
 const ROLE_COLORS = { shopper: '#4338CA', merchant: '#F97316', driver: '#10B981', admin: '#7C3AED' };
 
 const OrderChat = ({ orderId, orderLabel, onClose }) => {
   const { user } = useAuth();
+  const t = useT();
   const token = localStorage.getItem('token');
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
@@ -87,10 +89,10 @@ const OrderChat = ({ orderId, orderLabel, onClose }) => {
         exit={{ scale: 0.92, y: 20, opacity: 0 }}
         transition={{ type: 'spring', damping: 22, stiffness: 300 }}
         style={{
-          background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '480px',
+          background: t.card, borderRadius: '16px', width: '100%', maxWidth: '480px',
           maxHeight: '85vh', display: 'flex', flexDirection: 'column',
           direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
         }}
       >
         {/* Header */}
@@ -116,7 +118,7 @@ const OrderChat = ({ orderId, orderLabel, onClose }) => {
         </div>
 
         {/* Messages */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '200px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '200px', background: t.bg2 }}>
           {loading ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '8px' }}>
               {[1,2,3].map(i => (

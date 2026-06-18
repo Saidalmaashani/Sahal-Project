@@ -8,6 +8,7 @@ import { Label } from '../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import AnalyticsCharts from '../components/AnalyticsCharts';
+import ThemeToggle from '../components/ThemeToggle';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
@@ -411,7 +412,8 @@ const AdminDashboard = () => {
             <h1 className="text-2xl font-bold tracking-tight">لوحة تحكم المدير</h1>
             <p className="text-sm text-[#475569]">إدارة المنصة</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <ThemeToggle size="sm" />
             <Button variant="outline" onClick={() => navigate('/shop')}>
               <ArrowRight className="h-4 w-4 ml-2" />العودة
             </Button>

@@ -11,6 +11,7 @@ import {
   requestAndSubscribe, unsubscribeFromPush,
 } from '../utils/pushNotifications';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { useT } from '../contexts/ThemeContext';
 
 const TYPE_CONFIG = {
   order_confirmed: { icon: CheckCircle, color: '#10B981', bg: '#ECFDF5', label: 'طلب مؤكد' },
@@ -43,6 +44,7 @@ const NotificationBell = () => {
   const pollRef  = useRef(null);
 
   const token = localStorage.getItem('token');
+  const t = useT();
 
   const fetchNotifs = useCallback(async () => {
     try {
@@ -194,10 +196,10 @@ const NotificationBell = () => {
             top: 'calc(100% + 8px)',
             left: '50%', transform: 'translateX(-50%)',
             width: 'min(360px, calc(100vw - 32px))',
-            background: '#fff',
-            border: '1px solid #E2E8F0',
+            background: t.card,
+            border: `1px solid ${t.border}`,
             borderRadius: '16px',
-            boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.2)',
             zIndex: 200,
             overflow: 'hidden',
             direction: 'rtl',

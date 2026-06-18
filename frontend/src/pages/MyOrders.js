@@ -10,6 +10,7 @@ import { ArrowRight, Package, Truck, CheckCircle, Clock, XCircle, MessageCircle,
 import SupportChat from '../components/SupportChat';
 import OrderChat from '../components/OrderChat';
 import ReviewForm from '../components/ReviewForm';
+import ThemeToggle from '../components/ThemeToggle';
 
 const OrderSkeleton = () => (
   <div style={{ background: '#fff', borderRadius: '12px', padding: '20px', border: '1px solid #E2E8F0' }}>
@@ -85,9 +86,12 @@ const MyOrders = () => {
             <h1 className="text-2xl font-bold">طلباتي</h1>
             <p className="text-sm text-[#475569]">{orders.length} طلب</p>
           </div>
-          <Button variant="outline" onClick={() => navigate('/shop')}>
-            <ArrowRight className="h-4 w-4 ml-2" />متابعة التسوق
-          </Button>
+          <div className="flex gap-2 items-center">
+            <ThemeToggle size="sm" />
+            <Button variant="outline" onClick={() => navigate('/shop')}>
+              <ArrowRight className="h-4 w-4 ml-2" />متابعة التسوق
+            </Button>
+          </div>
         </div>
       </header>
 

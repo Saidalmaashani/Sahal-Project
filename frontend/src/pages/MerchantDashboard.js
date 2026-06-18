@@ -19,6 +19,7 @@ import {
 import SupportChat from '../components/SupportChat';
 import OrderChat from '../components/OrderChat';
 import AnalyticsCharts from '../components/AnalyticsCharts';
+import ThemeToggle from '../components/ThemeToggle';
 
 const CATEGORIES = [
   'إلكترونيات', 'أزياء وملابس', 'منزل وحديقة', 'رياضة ولياقة',
@@ -558,7 +559,8 @@ const MerchantDashboard = () => {
                   : `مرحباً ${user?.name} — ابدأ بإنشاء متجرك`}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <ThemeToggle size="sm" />
             <Button variant="outline" onClick={() => navigate('/shop')}>
               <ArrowRight className="h-4 w-4 ml-2" />العودة
             </Button>
