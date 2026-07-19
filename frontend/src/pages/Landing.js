@@ -12,13 +12,7 @@ const Landing = () => {
       <header className="header-glass sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-2 space-x-reverse">
-            <div className="h-10 w-10 bg-gradient-to-br from-[#4338CA] to-[#F97316] rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">س</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-2xl font-bold tracking-tighter text-[#4338CA] leading-none">سهل</span>
-              <span className="text-xs text-[#475569] tracking-wider">SAHAL</span>
-            </div>
+            <img src="/logo.png" alt="سهل" style={{height:"48px",width:"auto",objectFit:"contain"}} />
           </div>
           <div className="flex space-x-3 space-x-reverse">
             <Button data-testid="header-login-button" variant="outline" onClick={() => navigate('/login')}>
