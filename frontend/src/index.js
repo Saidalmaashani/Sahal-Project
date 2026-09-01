@@ -9,3 +9,8 @@ root.render(
     <App />
   </React.StrictMode>,
 );
+
+// Keep backend alive (ping every 10 minutes)
+setInterval(() => {
+  fetch(`${process.env.REACT_APP_BACKEND_URL}/health`).catch(() => {});
+}, 10 * 60 * 1000);

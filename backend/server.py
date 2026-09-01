@@ -2976,3 +2976,8 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 @app.get("/")
 async def root():
     return {"name": "Sahal API", "version": "1.0.0", "docs": "/docs"}
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
