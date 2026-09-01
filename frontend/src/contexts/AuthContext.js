@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = useCallback(async () => {
     // إذا راجع من OAuth، تخطى التحقق - AuthCallback بيتولى
-    if (window.location.hash?.includes('session_id=')) {
+    if (window.location.pathname === '/auth/callback') {
       setLoading(false);
       return;
     }
