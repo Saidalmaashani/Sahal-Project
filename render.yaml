@@ -15,7 +15,7 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: CORS_ORIGINS
-        value: https://sahal-frontend.onrender.com
+        value: https://sahal-app.onrender.com,https://sahal-frontend.onrender.com
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
@@ -31,7 +31,7 @@ services:
       - key: BACKEND_URL
         value: https://sahal-project.onrender.com
       - key: FRONTEND_URL
-        value: https://sahal-frontend.onrender.com
+        value: https://sahal-app.onrender.com,https://sahal-frontend.onrender.com
       - key: SMTP_EMAIL
         sync: false
       - key: SMTP_PASSWORD
