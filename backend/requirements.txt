@@ -27,3 +27,4 @@ pywebpush==2.0.0
 
 # AI Chat
 anthropic>=0.109.0
+slowapi==0.1.9

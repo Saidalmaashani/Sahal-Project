@@ -25,6 +25,9 @@ import bcrypt as _bcrypt
 import jwt as pyjwt
 import httpx
 from dotenv import load_dotenv
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 load_dotenv()
 
@@ -136,6 +139,9 @@ logger = logging.getLogger(__name__)
 
 # FastAPI app
 app = FastAPI(title="Sahal API", version="1.0.0")
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 api_router = APIRouter(prefix="/api")
 
 
@@ -372,7 +378,8 @@ async def get_current_user(
 # ==================== AUTH ENDPOINTS ====================
 
 @api_router.post("/auth/register")
-async def register(payload: UserRegister):
+@limiter.limit("3/minute")
+async def register(payload: UserRegister, request: Request):
     # تحقق من وجود الإيميل
     existing = await db.users.find_one({"email": payload.email.lower()})
     if existing:
@@ -443,7 +450,8 @@ async def register(payload: UserRegister):
 
 
 @api_router.post("/auth/login")
-async def login(payload: UserLogin):
+@limiter.limit("5/minute")
+async def login(payload: UserLogin, request: Request):
     user = await db.users.find_one({"email": payload.email.lower()})
     if not user:
         raise HTTPException(status_code=401, detail="بيانات الدخول غير صحيحة")
