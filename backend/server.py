@@ -41,7 +41,7 @@ JWT_EXPIRES_HOURS = 24 * 7  # أسبوع
 
 STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', '')
 BACKEND_URL    = os.environ.get('BACKEND_URL', '')  # e.g. https://sahal-backend.onrender.com
-FRONTEND_URL   = os.environ.get('FRONTEND_URL', 'https://sahal-frontend.onrender.com')
+FRONTEND_URL   = os.environ.get('FRONTEND_URL', 'https://YOUR-NEW-DOMAIN.com')
 SMTP_HOST      = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
 SMTP_PORT      = int(os.environ.get('SMTP_PORT', '587'))
 SMTP_EMAIL     = os.environ.get('SMTP_EMAIL', '')
@@ -1833,7 +1833,7 @@ async def generate_delivery_qr(
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
 
-    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+    frontend_url = FRONTEND_URL
     confirm_url  = f"{frontend_url}/confirm-delivery/{token}"
 
     return {
