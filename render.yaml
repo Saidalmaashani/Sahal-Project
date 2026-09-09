@@ -7,20 +7,31 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
     plan: free
+    healthCheckPath: /health
     envVars:
       - key: MONGO_URL
         sync: false
       - key: DB_NAME
         value: sahal_db
+      - key: ENV
+        value: production
       - key: JWT_SECRET
         sync: false
       - key: CORS_ORIGINS
-        value: https://sahal-app.onrender.com,https://sahal-frontend.onrender.com
+        value: https://sahal-frontend.onrender.com
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: STRIPE_API_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_CURRENCY
+        value: usd
+      - key: ALLOW_MOCK_PAYMENTS
+        value: "false"
+      - key: ADMIN_SETUP_TOKEN
         sync: false
       - key: VAPID_PRIVATE_KEY
         sync: false
@@ -31,7 +42,7 @@ services:
       - key: BACKEND_URL
         value: https://sahal-project.onrender.com
       - key: FRONTEND_URL
-        value: https://sahal-app.onrender.com,https://sahal-frontend.onrender.com
+        value: https://sahal-frontend.onrender.com
       - key: SMTP_EMAIL
         sync: false
       - key: SMTP_PASSWORD
