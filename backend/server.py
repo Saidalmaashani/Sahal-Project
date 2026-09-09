@@ -6,6 +6,8 @@ import os
 import uuid
 import logging
 import secrets
+import hashlib
+import hmac
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -40,12 +42,19 @@ JWT_ALGORITHM = 'HS256'
 JWT_EXPIRES_HOURS = 24 * 7  # أسبوع
 
 STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', '')
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 BACKEND_URL    = os.environ.get('BACKEND_URL', '')  # e.g. https://sahal-backend.onrender.com
-FRONTEND_URL   = os.environ.get('FRONTEND_URL', 'https://YOUR-NEW-DOMAIN.com')
+FRONTEND_URL   = os.environ.get('FRONTEND_URL', 'http://localhost:3000').rstrip('/')
 SMTP_HOST      = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
 SMTP_PORT      = int(os.environ.get('SMTP_PORT', '587'))
 SMTP_EMAIL     = os.environ.get('SMTP_EMAIL', '')
 SMTP_PASSWORD  = os.environ.get('SMTP_PASSWORD', '')
+
+# Environment & feature flags
+ENV                 = os.environ.get('ENV', 'development')
+ALLOW_MOCK_PAYMENTS = os.environ.get('ALLOW_MOCK_PAYMENTS', 'true').lower() in ('1', 'true', 'yes')
+ADMIN_SETUP_TOKEN   = os.environ.get('ADMIN_SETUP_TOKEN', '')
+ADMIN_INITIAL_PASSWORD = os.environ.get('ADMIN_INITIAL_PASSWORD', '')
 
 # VAPID keys for Web Push Notifications
 VAPID_PRIVATE_KEY  = os.environ.get('VAPID_PRIVATE_KEY', '')
@@ -56,6 +65,19 @@ ANTHROPIC_API_KEY  = os.environ.get('ANTHROPIC_API_KEY', '')
 PLATFORM_FEE = 0.07   # 7% إجمالي
 ADMIN_FEE    = 0.02   # 2% للمدير
 DRIVER_FEE   = 0.05   # 5% للمندوب
+
+# Order status machine (لا يسمح بقفزات غير قانونية بين الحالات)
+ORDER_STATUS_TRANSITIONS = {
+    "pending":   {"confirmed", "cancelled"},
+    "confirmed": {"confirmed", "shipped", "cancelled"},
+    "shipped":   {"delivered"},
+    "delivered": set(),
+    "cancelled": set(),
+}
+MAX_CART_QUANTITY = 99
+
+# Roles المسموح بالتسجيل الذاتي (admin يُنشأ فقط عبر seed/الإدارة)
+REGISTERABLE_ROLES = {"shopper", "merchant", "driver"}
 
 
 # ==================== WEBSOCKET MANAGER ====================
@@ -139,7 +161,9 @@ logger = logging.getLogger(__name__)
 
 # FastAPI app
 app = FastAPI(title="Sahal API", version="1.0.0")
+DISABLE_RATE_LIMIT = os.environ.get('SAHAL_DISABLE_RATE_LIMIT', 'false').lower() in ('1', 'true', 'yes')
 limiter = Limiter(key_func=get_remote_address)
+limiter.enabled = not DISABLE_RATE_LIMIT
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 api_router = APIRouter(prefix="/api")
@@ -329,6 +353,15 @@ def verify_password(plain: str, hashed: str) -> bool:
         return False
 
 
+async def _ahash_password(password: str) -> str:
+    """bcrypt blocking — يشتغل خارج event loop ليحافظ على استجابة الخادم"""
+    return await asyncio.to_thread(hash_password, password)
+
+
+async def _averify_password(plain: str, hashed: str) -> bool:
+    return await asyncio.to_thread(verify_password, plain, hashed)
+
+
 def create_jwt_token(user_id: str, role: str) -> str:
     payload = {
         "user_id": user_id,
@@ -385,8 +418,8 @@ async def register(payload: UserRegister, request: Request):
     if existing:
         raise HTTPException(status_code=400, detail="البريد الإلكتروني مستخدم بالفعل")
 
-    # تحقق من صحة الدور
-    if payload.role not in ["admin", "merchant", "shopper", "driver"]:
+    # تحقق من صحة الدور — admin غير مسموح بالتسجيل الذاتي
+    if payload.role not in REGISTERABLE_ROLES:
         raise HTTPException(status_code=400, detail="دور غير صالح")
 
     # رقم الهاتف إجباري
@@ -414,7 +447,7 @@ async def register(payload: UserRegister, request: Request):
         email=payload.email.lower(),
         name=payload.name,
         role=payload.role,
-        password_hash=hash_password(payload.password),
+        password_hash=await _ahash_password(payload.password),
         phone=payload.phone,
         address=payload.address,
         is_approved=is_approved,
@@ -456,7 +489,7 @@ async def login(payload: UserLogin, request: Request):
     if not user:
         raise HTTPException(status_code=401, detail="بيانات الدخول غير صحيحة")
 
-    if not user.get("password_hash") or not verify_password(payload.password, user["password_hash"]):
+    if not user.get("password_hash") or not await _averify_password(payload.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="بيانات الدخول غير صحيحة")
 
     # تحقق من الموافقة (للتجار)
@@ -487,28 +520,34 @@ async def logout(request: Request):
 
 # ==================== PASSWORD RESET ====================
 
+def _send_email_sync(to: str, subject: str, html_body: str) -> bool:
+    """يرسل إيميل عبر SMTP — يرجع True عند النجاح (sync core, يعمل في thread)"""
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = subject
+    msg['From']    = f"سهل Sahal <{SMTP_EMAIL}>"
+    msg['To']      = to
+    msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
+        server.ehlo()
+        server.starttls()
+        server.login(SMTP_EMAIL, SMTP_PASSWORD)
+        server.sendmail(SMTP_EMAIL, to, msg.as_string())
+    return True
+
+
 async def _send_email(to: str, subject: str, html_body: str) -> bool:
     """يرسل إيميل عبر SMTP — يرجع True عند النجاح"""
     if not SMTP_EMAIL or not SMTP_PASSWORD:
         return False
     try:
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = subject
-        msg['From']    = f"سهل Sahal <{SMTP_EMAIL}>"
-        msg['To']      = to
-        msg.attach(MIMEText(html_body, 'html', 'utf-8'))
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
-            server.ehlo()
-            server.starttls()
-            server.login(SMTP_EMAIL, SMTP_PASSWORD)
-            server.sendmail(SMTP_EMAIL, to, msg.as_string())
-        return True
+        return await asyncio.to_thread(_send_email_sync, to, subject, html_body)
     except Exception as e:
         logger.error(f"Email error: {e}")
         return False
 
 
 @api_router.post("/auth/forgot-password")
+@limiter.limit("3/minute")
 async def forgot_password(request: Request):
     body = await request.json()
     email = (body.get("email") or "").lower().strip()
@@ -523,11 +562,12 @@ async def forgot_password(request: Request):
         return {"message": generic_msg}
 
     # احذف أي رموز قديمة وأنشئ رمزاً جديداً
-    token = uuid.uuid4().hex
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
     expires_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
     await db.password_resets.delete_many({"email": email})
     await db.password_resets.insert_one({
-        "token": token, "user_id": user["user_id"],
+        "token_hash": token_hash, "user_id": user["user_id"],
         "email": email, "expires_at": expires_at, "used": False,
         "created_at": datetime.now(timezone.utc).isoformat()
     })
@@ -561,13 +601,16 @@ async def forgot_password(request: Request):
 
     result: dict = {"message": generic_msg}
     if not email_sent:
-        # وضع التطوير — أرجع الرابط مباشرة إذا SMTP غير مضبوط
-        result["reset_url"] = reset_url
-        result["dev_note"] = "SMTP not configured — use reset_url directly"
+        # وضع التطوير فقط — أرجع الرابط مباشرة إذا SMTP غير مضبوط
+        # في الإنتاج لا نُعيد أي رابط (يمنع استيلاء الحسابات)
+        if ENV != "production":
+            result["reset_url"] = reset_url
+            result["dev_note"] = "SMTP not configured — use reset_url directly"
     return result
 
 
 @api_router.post("/auth/reset-password")
+@limiter.limit("5/minute")
 async def reset_password(request: Request):
     body = await request.json()
     token       = (body.get("token") or "").strip()
@@ -578,7 +621,8 @@ async def reset_password(request: Request):
     if len(new_password) < 8:
         raise HTTPException(status_code=400, detail="كلمة المرور يجب أن تكون 8 أحرف على الأقل")
 
-    doc = await db.password_resets.find_one({"token": token, "used": False})
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    doc = await db.password_resets.find_one({"token_hash": token_hash, "used": False})
     if not doc:
         raise HTTPException(status_code=400, detail="الرابط غير صالح أو تم استخدامه مسبقاً")
 
@@ -587,9 +631,9 @@ async def reset_password(request: Request):
 
     await db.users.update_one(
         {"user_id": doc["user_id"]},
-        {"$set": {"password_hash": hash_password(new_password)}}
+        {"$set": {"password_hash": await _ahash_password(new_password)}}
     )
-    await db.password_resets.update_one({"token": token}, {"$set": {"used": True}})
+    await db.password_resets.update_one({"token_hash": token_hash}, {"$set": {"used": True}})
 
     return {"message": "تم تغيير كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن."}
 
@@ -627,11 +671,17 @@ async def get_my_orders(authorization: Optional[str] = Header(None), request: Re
         {"user_id": user["user_id"]}, {"_id": 0}
     ).sort("created_at", -1).to_list(500)
 
+    # جلب كل المنتجات دفعة واحدة بدلاً من استعلام لكل صنف
+    product_ids = {item["product_id"] for o in orders for item in o.get("items", [])}
+    products = await db.products.find(
+        {"product_id": {"$in": list(product_ids)}}, {"_id": 0}
+    ).to_list(len(product_ids) + 1)
+    prod_map = {p["product_id"]: p for p in products}
+
     for order in orders:
         enriched_items = []
         for item in order.get("items", []):
-            product = await db.products.find_one({"product_id": item["product_id"]}, {"_id": 0})
-            enriched_items.append({**item, "product": product})
+            enriched_items.append({**item, "product": prod_map.get(item["product_id"])})
         order["items"] = enriched_items
 
     return orders
@@ -817,10 +867,13 @@ async def list_products(
     min_rating: Optional[float] = None,
     in_stock_only: bool = True,
     sort_by: Optional[str] = None,   # price_asc | price_desc | rating | newest
+    store_id: Optional[str] = None,  # تصفية حسب المتجر
 ):
     query: dict = {}
     if in_stock_only:
         query["stock"] = {"$gt": 0}
+    if store_id:
+        query["store_id"] = store_id
     if category and category != "all":
         query["category"] = category
     if search:
@@ -1122,6 +1175,10 @@ async def add_to_cart(
     if not product:
         raise HTTPException(status_code=404, detail="المنتج غير موجود")
 
+    # ضبط الكمية — لا سالب ولا صفر ولا أكثر من الحد الأقصى
+    if quantity < 1 or quantity > MAX_CART_QUANTITY:
+        raise HTTPException(status_code=400, detail="الكمية يجب أن تكون بين 1 و 99")
+
     # ادمج لو موجود سابقاً
     existing = await db.cart_items.find_one({
         "user_id": user["user_id"],
@@ -1151,10 +1208,17 @@ async def get_cart(authorization: Optional[str] = Header(None), request: Request
     user = await get_current_user(authorization, request)
     cart_items = await db.cart_items.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(1000)
 
-    # أضف تفاصيل المنتج
+    # جلب كل المنتجات دفعة واحدة بدلاً من استعلام لكل عنصر
+    product_ids = [item["product_id"] for item in cart_items]
+    if product_ids:
+        products = await db.products.find(
+            {"product_id": {"$in": product_ids}}, {"_id": 0}
+        ).to_list(len(product_ids) + 1)
+        prod_map = {p["product_id"]: p for p in products}
+    else:
+        prod_map = {}
     for item in cart_items:
-        product = await db.products.find_one({"product_id": item["product_id"]}, {"_id": 0})
-        item["product"] = product
+        item["product"] = prod_map.get(item["product_id"])
 
     return cart_items
 
@@ -1175,6 +1239,26 @@ async def remove_from_cart(
 
 # ==================== ORDER & PAYMENT ENDPOINTS ====================
 
+async def _release_stock(reserved: List[tuple]):
+    """يُعيد المخزون المحجوز (عند فشل إنشاء الطلب/الدفع)"""
+    for pid, qty in reserved:
+        await db.products.update_one(
+            {"product_id": pid},
+            {"$inc": {"stock": qty}}
+        )
+
+
+async def _restore_stock_for_order(order: dict):
+    """يُعيد المخزون لطلب ملغي/منتهي"""
+    for item in order.get("items", []):
+        qty = int(item.get("quantity", 0))
+        if qty > 0:
+            await db.products.update_one(
+                {"product_id": item.get("product_id")},
+                {"$inc": {"stock": qty}}
+            )
+
+
 @api_router.post("/checkout")
 async def checkout(
     checkout_data: CheckoutRequest,
@@ -1183,23 +1267,55 @@ async def checkout(
 ):
     user = await get_current_user(authorization, request)
 
-    # احسب المجموع وتحقق من المخزون
-    total = 0.0
+    # تحقق من الكميات (int >= 1) وارفض التكرار
+    seen: set = set()
+    validated_items = []
     for item in checkout_data.items:
-        product = await db.products.find_one({"product_id": item["product_id"]}, {"_id": 0})
+        pid = str(item.get("product_id", "")).strip()
+        try:
+            qty = int(item.get("quantity", 0))
+        except (TypeError, ValueError):
+            qty = 0
+        if not pid or pid in seen:
+            raise HTTPException(status_code=400, detail="عناصر الطلب غير صالحة")
+        if qty < 1 or qty > MAX_CART_QUANTITY:
+            raise HTTPException(status_code=400, detail="كمية غير صالحة في الطلب")
+        seen.add(pid)
+        validated_items.append((pid, qty))
+
+    # حجز المخزون بشكل ذرّي قبل إنشاء الطلب — يمنع البيع الزائد
+    total = 0.0
+    reserved = []
+    order_items = []
+    for pid, qty in validated_items:
+        product = await db.products.find_one({"product_id": pid}, {"_id": 0})
         if not product:
-            raise HTTPException(status_code=404, detail=f"المنتج {item['product_id']} غير موجود")
-        if product["stock"] < item["quantity"]:
+            await _release_stock(reserved)
+            raise HTTPException(status_code=404, detail=f"المنتج {pid} غير موجود")
+        result = await db.products.update_one(
+            {"product_id": pid, "stock": {"$gte": qty}},
+            {"$inc": {"stock": -qty}}
+        )
+        if result.matched_count == 0:
+            await _release_stock(reserved)
             raise HTTPException(status_code=400, detail=f"المخزون غير كافٍ للمنتج: {product['name']}")
-        total += product["price"] * item["quantity"]
+        reserved.append((pid, qty))
+        total += product["price"] * qty
+        order_items.append({
+            "product_id": pid,
+            "quantity": qty,
+            "price": product["price"],
+            "name": product["name"],
+            "category": product.get("category", ""),
+        })
 
     # أنشئ الطلب
     order_id = f"order_{uuid.uuid4().hex[:12]}"
     order = Order(
         order_id=order_id,
         user_id=user["user_id"],
-        items=checkout_data.items,
-        total_amount=total,
+        items=order_items,
+        total_amount=round(total, 3),
         status="pending",
         payment_status="pending",
         delivery_address=checkout_data.delivery_address,
@@ -1212,27 +1328,35 @@ async def checkout(
 
     # Stripe Checkout مباشر (إذا كان STRIPE_API_KEY مضبوطاً)
     if STRIPE_API_KEY:
-        origin = request.headers.get('origin', str(request.base_url).rstrip('/'))
-        success_url = f"{origin}/order-success?session_id={{CHECKOUT_SESSION_ID}}"
-        cancel_url = f"{origin}/cart"
-        async with httpx.AsyncClient() as http:
-            resp = await http.post(
-                "https://api.stripe.com/v1/checkout/sessions",
-                auth=(STRIPE_API_KEY, ""),
-                data={
-                    "payment_method_types[]": "card",
-                    "line_items[0][price_data][currency]": "usd",
-                    "line_items[0][price_data][unit_amount]": str(int(total * 100)),
-                    "line_items[0][price_data][product_data][name]": "طلب سهل",
-                    "line_items[0][quantity]": "1",
-                    "mode": "payment",
-                    "success_url": success_url,
-                    "cancel_url": cancel_url,
-                    "metadata[order_id]": order_id,
-                    "metadata[user_id]": user["user_id"],
-                }
-            )
+        base = FRONTEND_URL or (str(request.base_url).rstrip('/'))
+        success_url = f"{base}/order-success?session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{base}/cart"
+        try:
+            async with httpx.AsyncClient() as http:
+                resp = await http.post(
+                    "https://api.stripe.com/v1/checkout/sessions",
+                    auth=(STRIPE_API_KEY, ""),
+                    data={
+                        "payment_method_types[]": "card",
+                        "line_items[0][price_data][currency]": os.environ.get('STRIPE_CURRENCY', 'usd'),
+                        "line_items[0][price_data][unit_amount]": str(int(round(total, 2) * 100)),
+                        "line_items[0][price_data][product_data][name]": "طلب سهل",
+                        "line_items[0][quantity]": "1",
+                        "mode": "payment",
+                        "success_url": success_url,
+                        "cancel_url": cancel_url,
+                        "metadata[order_id]": order_id,
+                        "metadata[user_id]": user["user_id"],
+                    }
+                )
+        except Exception as e:
+            logger.error(f"Stripe session error: {e}")
+            await _restore_stock_for_order(order.model_dump())
+            await db.orders.delete_one({"order_id": order_id})
+            raise HTTPException(status_code=502, detail="فشل إنشاء جلسة الدفع")
         if resp.status_code != 200:
+            await _restore_stock_for_order(order.model_dump())
+            await db.orders.delete_one({"order_id": order_id})
             raise HTTPException(status_code=502, detail="فشل إنشاء جلسة الدفع")
         session = resp.json()
         await db.payment_transactions.insert_one({
@@ -1241,64 +1365,69 @@ async def checkout(
             "session_id": session["id"],
             "user_id": user["user_id"],
             "amount": total,
-            "currency": "usd",
+            "currency": os.environ.get('STRIPE_CURRENCY', 'usd'),
             "payment_status": "pending",
             "created_at": datetime.now(timezone.utc).isoformat()
         })
-        for item in checkout_data.items:
-            await db.products.update_one(
-                {"product_id": item["product_id"]},
-                {"$inc": {"stock": -item["quantity"]}}
-            )
         await db.cart_items.delete_many({"user_id": user["user_id"]})
         return {"checkout_url": session["url"], "session_id": session["id"], "order_id": order_id}
-    else:
-        # Mock للتطوير — يؤكد الطلب فوراً
-        mock_session = f"cs_mock_{uuid.uuid4().hex[:12]}"
-        await db.payment_transactions.insert_one({
-            "transaction_id": f"txn_{uuid.uuid4().hex[:12]}",
-            "order_id": order_id,
-            "session_id": mock_session,
-            "user_id": user["user_id"],
-            "amount": total,
-            "currency": "usd",
-            "payment_status": "paid",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        })
-        await db.orders.update_one(
-            {"order_id": order_id},
-            {"$set": {"payment_status": "paid", "status": "confirmed"}}
-        )
-        # تخفيض المخزون
-        for item in checkout_data.items:
-            await db.products.update_one(
-                {"product_id": item["product_id"]},
-                {"$inc": {"stock": -item["quantity"]}}
-            )
-        await db.cart_items.delete_many({"user_id": user["user_id"]})
-        await _process_referral_reward(user["user_id"], total)
-        # إشعار للمتسوق
-        await _create_notification(user["user_id"], "order_confirmed",
-            "تم تأكيد طلبك!", f"طلبك #{order_id[-8:]} تم تأكيده وسيُجهَّز قريباً",
-            f"/my-orders")
-        # إشعار للتجار المعنيين
-        merchant_ids = set()
-        for item in checkout_data.items:
-            prod = await db.products.find_one({"product_id": item["product_id"]}, {"_id": 0})
-            if prod:
-                merchant_ids.add(prod["merchant_id"])
-        for mid in merchant_ids:
+
+    # الـ Mock للتطوير فقط — ممنوع في الإنتاج
+    if ENV != "development" or not ALLOW_MOCK_PAYMENTS:
+        await _restore_stock_for_order(order.model_dump())
+        await db.orders.delete_one({"order_id": order_id})
+        raise HTTPException(status_code=503, detail="الدفع غير مُعد بعد — راجع الإدارة")
+
+    mock_session = f"cs_mock_{uuid.uuid4().hex[:12]}"
+    await db.payment_transactions.insert_one({
+        "transaction_id": f"txn_{uuid.uuid4().hex[:12]}",
+        "order_id": order_id,
+        "session_id": mock_session,
+        "user_id": user["user_id"],
+        "amount": total,
+        "currency": os.environ.get('STRIPE_CURRENCY', 'usd'),
+        "payment_status": "paid",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {"$set": {"payment_status": "paid", "status": "confirmed"}}
+    )
+    await db.cart_items.delete_many({"user_id": user["user_id"]})
+    await _process_referral_reward(user["user_id"], total)
+    await _create_notification(user["user_id"], "order_confirmed",
+        "تم تأكيد طلبك!", f"طلبك #{order_id[-8:]} تم تأكيده وسيُجهَّز قريباً",
+        f"/my-orders")
+    merchant_ids = set()
+    for item in order_items:
+        prod = await db.products.find_one({"product_id": item["product_id"]}, {"_id": 0, "merchant_id": 1})
+        if prod:
+            merchant_ids.add(prod.get("merchant_id"))
+    for mid in merchant_ids:
+        if mid:
             await _create_notification(mid, "new_order",
                 "طلب جديد!", f"وصلك طلب جديد بقيمة {total:.3f} ر.ع",
                 "/merchant/dashboard")
-        return {"checkout_url": f"/order-success?session_id={mock_session}", "session_id": mock_session, "order_id": order_id}
+    return {"checkout_url": f"/order-success?session_id={mock_session}", "session_id": mock_session, "order_id": order_id}
 
 
 @api_router.get("/payment/status/{session_id}")
-async def get_payment_status(session_id: str):
+async def get_payment_status(
+    session_id: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None
+):
     transaction = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
     if not transaction:
         raise HTTPException(status_code=404, detail="معاملة غير موجودة")
+
+    # صاحب الطلب فقط (أو admin) — يمنع استفسار الآخرين عن معاملاتك
+    try:
+        user = await get_current_user(authorization, request)
+    except HTTPException:
+        user = None
+    if not user or (user["user_id"] != transaction.get("user_id") and user["role"] != "admin"):
+        raise HTTPException(status_code=403, detail="غير مصرح")
 
     if STRIPE_API_KEY and not session_id.startswith("cs_mock_"):
         # تحقق من حالة الدفع عبر Stripe API مباشرة
@@ -1331,8 +1460,12 @@ async def get_payment_status(session_id: str):
             "currency": stripe_data.get("currency", "usd"),
             "metadata": stripe_data.get("metadata", {})
         }
-    else:
-        # Mock
+
+    # Mock path — متاح فقط للتطوير وليس في الإنتاج
+    if ENV != "development" or not ALLOW_MOCK_PAYMENTS:
+        raise HTTPException(status_code=503, detail="الدفع غير مُعد — راجع الإدارة")
+
+    if transaction["payment_status"] != "paid":
         await db.payment_transactions.update_one(
             {"session_id": session_id}, {"$set": {"payment_status": "paid"}}
         )
@@ -1341,13 +1474,104 @@ async def get_payment_status(session_id: str):
             {"$set": {"payment_status": "paid", "status": "confirmed"}}
         )
         await _process_referral_reward(transaction["user_id"], transaction["amount"])
-        return {
-            "session_id": session_id,
-            "payment_status": "paid",
-            "amount_total": int(transaction["amount"] * 100),
-            "currency": transaction["currency"],
-            "metadata": {"order_id": transaction["order_id"]}
-        }
+    return {
+        "session_id": session_id,
+        "payment_status": "paid",
+        "amount_total": int(transaction["amount"] * 100),
+        "currency": transaction["currency"],
+        "metadata": {"order_id": transaction["order_id"]}
+    }
+
+
+def _verify_stripe_signature(payload: bytes, header: str, secret: str) -> bool:
+    """تحقق من توقيع Webhook بين Stripe والخادم (HMAC SHA-256)"""
+    try:
+        ts = None
+        sigs = []
+        for item in header.split(','):
+            k, _, v = item.partition('=')
+            if k == 't':
+                ts = v
+            elif k == 'v1':
+                sigs.append(v)
+        if not ts or not sigs:
+            return False
+        payload_str = payload.decode('utf-8')
+        for sig in sigs:
+            expected = hmac.new(secret.encode(), f"{ts}.{payload_str}".encode(), hashlib.sha256).hexdigest()
+            if hmac.compare_digest(expected, sig):
+                return True
+        return False
+    except Exception:
+        return False
+
+
+@api_router.post("/stripe/webhook")
+async def stripe_webhook(request: Request):
+    """Webhook من Stripe — تأكيد الدفع / فشله بشكل موثوق وضروري"""
+    payload = await request.body()
+    signature = request.headers.get("stripe-signature", "")
+
+    if not STRIPE_WEBHOOK_SECRET:
+        logger.error("STRIPE_WEBHOOK_SECRET not set — webhook signature NOT verified. Configure it in production!")
+    elif not _verify_stripe_signature(payload, signature, STRIPE_WEBHOOK_SECRET):
+        raise HTTPException(status_code=400, detail="Invalid signature")
+
+    try:
+        event = json.loads(payload)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid payload")
+
+    event_type = event.get("type", "")
+    data = event.get("data", {}).get("object", {})
+
+    if event_type == "checkout.session.completed":
+        session_id = data.get("id")
+        txn = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+        if not txn or txn.get("payment_status") == "paid":
+            return {"received": True}
+
+        await db.payment_transactions.update_one(
+            {"session_id": session_id}, {"$set": {"payment_status": "paid"}}
+        )
+        await db.orders.update_one(
+            {"order_id": txn["order_id"]},
+            {"$set": {"payment_status": "paid", "status": "confirmed"}}
+        )
+        await _process_referral_reward(txn["user_id"], txn["amount"])
+
+        order = await db.orders.find_one({"order_id": txn["order_id"]}, {"_id": 0})
+        if order:
+            await _create_notification(txn["user_id"], "order_confirmed",
+                "تم تأكيد طلبك!", f"طلبك #{order['order_id'][-8:]} تم تأكيده بعد الدفع",
+                "/my-orders")
+            merchant_ids = set()
+            for item in order.get("items", []):
+                prod = await db.products.find_one({"product_id": item.get("product_id")}, {"_id": 0, "merchant_id": 1})
+                if prod:
+                    merchant_ids.add(prod.get("merchant_id"))
+            for mid in merchant_ids:
+                if mid:
+                    await _create_notification(mid, "new_order",
+                        "طلب جديد!", f"وصلك طلب جديد بقيمة {order['total_amount']:.3f} ر.ع",
+                        "/merchant/dashboard")
+
+    elif event_type in ("checkout.session.expired", "payment_intent.payment_failed"):
+        session_id = data.get("id") or data.get("payment_intent")
+        txn = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+        if txn and txn.get("payment_status") != "paid":
+            order = await db.orders.find_one({"order_id": txn["order_id"]}, {"_id": 0})
+            if order:
+                await _restore_stock_for_order(order)
+                await db.orders.update_one(
+                    {"order_id": txn["order_id"]},
+                    {"$set": {"status": "cancelled", "payment_status": "failed"}}
+                )
+            await db.payment_transactions.update_one(
+                {"session_id": session_id}, {"$set": {"payment_status": "failed"}}
+            )
+
+    return {"received": True}
 
 
 async def _create_notification(user_id: str, notif_type: str, title: str, message: str, link: str = None):
@@ -1372,30 +1596,34 @@ async def _create_notification(user_id: str, notif_type: str, title: str, messag
 
 
 async def _process_referral_reward(user_id: str, amount: float):
-    """معالجة مكافأة الإحالة عند أول شراء"""
+    """معالجة مكافأة الإحالة عند أول شراء — بمطالبة ذرّية تمنع الدفع المزدوج"""
     buyer = await db.users.find_one({"user_id": user_id}, {"_id": 0})
-    if buyer and buyer.get("referred_by"):
-        paid_count = await db.orders.count_documents({
-            "user_id": user_id,
-            "payment_status": "paid"
-        })
-        if paid_count == 1:
-            reward = round(amount * 0.10, 2)
-            await db.users.update_one(
-                {"user_id": buyer["referred_by"]},
-                {"$inc": {"referral_earnings": reward}}
-            )
-            await db.referrals.update_one(
-                {"referred_id": user_id},
-                {"$set": {"status": "rewarded", "reward_amount": reward}}
-            )
-            # إشعار لصاحب الإحالة
-            await _create_notification(
-                buyer["referred_by"], "referral_reward",
-                "مكافأة إحالة!",
-                f"حصلت على {reward} ر.ع من إحالة صديق",
-                "/referrals"
-            )
+    if not buyer or not buyer.get("referred_by"):
+        return
+
+    reward = round(amount * 0.10, 2)
+    claimed = await db.referrals.find_one_and_update(
+        {"referred_id": user_id, "status": "pending"},
+        {"$set": {
+            "status": "rewarded",
+            "reward_amount": reward,
+            "rewarded_at": datetime.now(timezone.utc).isoformat(),
+        }},
+    )
+    # لم نجد إحالة بانتظار المكافأة → أُعطيت سابقاً (لا دفع مزدوج)
+    if not claimed:
+        return
+
+    await db.users.update_one(
+        {"user_id": buyer["referred_by"]},
+        {"$inc": {"referral_earnings": reward}}
+    )
+    await _create_notification(
+        buyer["referred_by"], "referral_reward",
+        "مكافأة إحالة!",
+        f"حصلت على {reward} ر.ع من إحالة صديق",
+        "/referrals"
+    )
 
 
 @api_router.get("/orders")
@@ -1525,6 +1753,38 @@ async def update_order_status(
     if user["role"] not in ["admin", "merchant", "driver"]:
         raise HTTPException(status_code=403, detail="غير مصرح")
 
+    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="الطلب غير موجود")
+
+    current_status = order.get("status", "pending")
+    allowed_next = ORDER_STATUS_TRANSITIONS.get(current_status, set())
+    if status not in allowed_next:
+        raise HTTPException(status_code=400, detail=f"لا يمكن نقل الطلب من '{current_status}' إلى '{status}'")
+
+    # تحقق من الصلاحية حسب الدور
+    if user["role"] == "merchant":
+        # التاجر يخدم فقط الطلبات التي تحتوي منتجاته، ويقتصر على تأكيد أو إلغاء
+        if status not in {"confirmed", "cancelled"}:
+            raise HTTPException(status_code=403, detail="غير مصرح لهذه الحالة")
+        my_products = await db.products.find(
+            {"merchant_id": user["user_id"]}, {"_id": 0, "product_id": 1}
+        ).to_list(10000)
+        my_ids = {p["product_id"] for p in my_products}
+        if not any(item.get("product_id") in my_ids for item in order.get("items", [])):
+            raise HTTPException(status_code=403, detail="هذا الطلب لا يخصك")
+
+    if user["role"] == "driver":
+        if status != "delivered":
+            raise HTTPException(status_code=403, detail="غير مصرح لهذه الحالة")
+        driver = await db.delivery_drivers.find_one({"user_id": user["user_id"]}, {"_id": 0})
+        if not driver or order.get("driver_id") != driver["driver_id"]:
+            raise HTTPException(status_code=403, detail="هذا الطلب ليس لك")
+
+    # لا يمكن التسليم إلا بدفع مؤكد
+    if status == "delivered" and order.get("payment_status") != "paid":
+        raise HTTPException(status_code=400, detail="لا يمكن التسليم قبل تأكيد الدفع")
+
     await db.orders.update_one(
         {"order_id": order_id},
         {"$set": {"status": status, "updated_at": datetime.now(timezone.utc).isoformat()}}
@@ -1611,6 +1871,7 @@ async def get_driver_stats(authorization: Optional[str] = Header(None), request:
 async def get_deliveries(authorization: Optional[str] = Header(None), request: Request = None):
     user = await get_current_user(authorization, request)
 
+    # كل دور يرى فقط ما يخصه — لا تسريب لطلبات الآخرين
     if user["role"] == "driver":
         driver = await db.delivery_drivers.find_one({"user_id": user["user_id"]}, {"_id": 0})
         if not driver:
@@ -1623,11 +1884,25 @@ async def get_deliveries(authorization: Optional[str] = Header(None), request: R
             ]},
             {"_id": 0}
         ).sort("created_at", -1).to_list(1000)
-    else:
+    elif user["role"] == "admin":
         orders = await db.orders.find(
             {"payment_status": "paid", "status": {"$in": ["confirmed", "shipped"]}},
             {"_id": 0}
-        ).to_list(1000)
+        ).sort("created_at", -1).to_list(1000)
+    else:
+        # التاجر: طلبات تحتوي على منتجاته فقط. المشتري: طلباته فقط.
+        query: dict = {"payment_status": "paid", "status": {"$in": ["confirmed", "shipped"]}}
+        if user["role"] == "merchant":
+            my_products = await db.products.find(
+                {"merchant_id": user["user_id"]}, {"_id": 0, "product_id": 1}
+            ).to_list(10000)
+            product_ids = [p["product_id"] for p in my_products]
+            if not product_ids:
+                return []
+            query["items.product_id"] = {"$in": product_ids}
+        else:
+            query["user_id"] = user["user_id"]
+        orders = await db.orders.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
 
     # أضف موقع التاجر لكل طلب
     for order in orders:
@@ -1657,9 +1932,22 @@ async def assign_delivery(
     if user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
 
+    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="الطلب غير موجود")
+    driver = await db.delivery_drivers.find_one({"driver_id": driver_id}, {"_id": 0})
+    if not driver:
+        raise HTTPException(status_code=404, detail="المندوب غير موجود")
+    if not driver.get("is_available", False):
+        raise HTTPException(status_code=400, detail="هذا المندوب غير متاح حالياً")
+
     await db.orders.update_one(
         {"order_id": order_id},
-        {"$set": {"driver_id": driver_id, "status": "shipped"}}
+        {"$set": {"driver_id": driver_id, "status": "shipped", "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    await db.delivery_drivers.update_one(
+        {"driver_id": driver_id},
+        {"$set": {"is_available": False}}
     )
     return {"message": "Driver assigned"}
 
@@ -1961,9 +2249,14 @@ async def accept_delivery(order_id: str, authorization: Optional[str] = Header(N
         raise HTTPException(status_code=400, detail="لا يمكن قبول هذا الطلب — حالته غير مؤهلة")
     
     await db.orders.update_one(
-        {"order_id": order_id},
+        {"order_id": order_id, "driver_id": None, "status": "confirmed"},
         {"$set": {"driver_id": driver["driver_id"], "status": "shipped", "updated_at": datetime.now(timezone.utc).isoformat()}}
     )
+    # تأكد ذرّياً أن التحديث نجح — مندوب آخر قد يكون سبقك بالطلبية
+    updated_order = await db.orders.find_one({"order_id": order_id}, {"_id": 0, "driver_id": 1})
+    if not updated_order or updated_order.get("driver_id") != driver["driver_id"]:
+        raise HTTPException(status_code=409, detail="تم قبول هذا الطلب من مندوب آخر للتو")
+
     await db.delivery_drivers.update_one(
         {"driver_id": driver["driver_id"]},
         {"$set": {"is_available": False}}
@@ -2083,7 +2376,7 @@ async def admin_create_user(
         email=payload.email.lower(),
         name=payload.name,
         role=payload.role,
-        password_hash=hash_password(payload.password),
+        password_hash=await _ahash_password(payload.password),
         phone=payload.phone,
         is_approved=True,
         referral_code=f"SAHAL{uuid.uuid4().hex[:6].upper()}",
@@ -2158,6 +2451,22 @@ async def approve_user(
     return {"message": "تم التحديث"}
 
 
+def _merchant_order_share(order: dict, price_map: dict) -> float:
+    """إيراد التاجر من طلب = مجموع (سعر × كمية) لمنتجات التاجر فقط داخل الطلب"""
+    share = 0.0
+    for item in order.get("items", []):
+        pid = item.get("product_id")
+        if pid not in price_map:
+            continue
+        qty = item.get("quantity", 1)
+        price = item.get("price") or price_map.get(pid, 0)
+        try:
+            share += float(price) * int(qty)
+        except (TypeError, ValueError):
+            continue
+    return round(share, 3)
+
+
 @api_router.get("/admin/analytics")
 async def get_analytics(authorization: Optional[str] = Header(None), request: Request = None):
     user = await get_current_user(authorization, request)
@@ -2169,14 +2478,20 @@ async def get_analytics(authorization: Optional[str] = Header(None), request: Re
     total_orders = await db.orders.count_documents({})
 
     if user["role"] == "merchant":
-        products = await db.products.find({"merchant_id": user["user_id"]}, {"_id": 0}).to_list(1000)
-        product_ids = [p["product_id"] for p in products]
-        all_orders = await db.orders.find({}, {"_id": 0}).to_list(1000)
-        merchant_orders = [o for o in all_orders if any(item["product_id"] in product_ids for item in o["items"])]
-        total_revenue = sum(o["total_amount"] for o in merchant_orders if o["payment_status"] == "paid")
+        products = await db.products.find(
+            {"merchant_id": user["user_id"]}, {"_id": 0, "product_id": 1, "price": 1}
+        ).to_list(1000)
+        price_map = {p["product_id"]: p.get("price", 0) for p in products}
+        paid_orders = await db.orders.find(
+            {"payment_status": "paid", "items.product_id": {"$in": list(price_map.keys())}},
+            {"_id": 0}
+        ).to_list(1000)
+        total_revenue = sum(_merchant_order_share(o, price_map) for o in paid_orders)
     else:
-        paid_orders = await db.orders.find({"payment_status": "paid"}, {"_id": 0}).to_list(1000)
-        total_revenue = sum(o["total_amount"] for o in paid_orders)
+        paid_orders = await db.orders.find(
+            {"payment_status": "paid"}, {"_id": 0, "total_amount": 1}
+        ).to_list(1000)
+        total_revenue = round(sum(o.get("total_amount", 0) for o in paid_orders), 3)
 
     return {
         "total_users": total_users,
@@ -2211,13 +2526,26 @@ async def get_analytics_charts(authorization: Optional[str] = Header(None), requ
     from collections import defaultdict
     monthly: dict = defaultdict(lambda: {"revenue": 0.0, "orders": 0})
     now = datetime.now(timezone.utc)
+
+    merchant_price_map = {}
+    if is_merchant:
+        merchant_price_map = {
+            p["product_id"]: p.get("price", 0)
+            for p in await db.products.find(
+                {"merchant_id": user["user_id"]}, {"_id": 0, "product_id": 1, "price": 1}
+            ).to_list(10000)
+        }
+
     for o in paid_orders:
         try:
             dt = datetime.fromisoformat(o["created_at"].replace("Z", "+00:00"))
             diff = (now.year - dt.year) * 12 + (now.month - dt.month)
             if 0 <= diff < 6:
                 key = dt.strftime("%Y-%m")
-                monthly[key]["revenue"] += o.get("total_amount", 0)
+                if is_merchant:
+                    monthly[key]["revenue"] += _merchant_order_share(o, merchant_price_map)
+                else:
+                    monthly[key]["revenue"] += o.get("total_amount", 0)
                 monthly[key]["orders"]  += 1
         except Exception:
             pass
@@ -2515,7 +2843,9 @@ async def send_chat_message(
         try:
             import anthropic as _anthropic
             client = _anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-            resp = client.messages.create(
+            # العميل متزامن — يشغّله في thread حتى لا يحجب event loop
+            resp = await asyncio.to_thread(
+                client.messages.create,
                 model="claude-haiku-4-5-20251001",
                 max_tokens=512,
                 system=system_prompt,
@@ -2568,6 +2898,19 @@ async def get_chat_history(authorization: Optional[str] = Header(None), request:
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB
 
+def _sniff_image_type(data: bytes) -> Optional[str]:
+    """يكتشف نوع الصورة من Magic Bytes — لا يثق بـ Content-Type المُرسل من العميل"""
+    if data[:3] == b'\xff\xd8\xff':
+        return "image/jpeg"
+    if data[:8] == b'\x89PNG\r\n\x1a\n':
+        return "image/png"
+    if data[:4] == b'GIF8':
+        return "image/gif"
+    if len(data) >= 12 and data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+        return "image/webp"
+    return None
+
+
 def _build_base_url(request: Request) -> str:
     """يبني الـ base URL الصحيح في الإنتاج وفي التطوير"""
     if BACKEND_URL:
@@ -2587,19 +2930,23 @@ async def upload_image(
     """رفع صورة — يحفظها في MongoDB ويعيد URL دائم لا يتأثر بإعادة النشر"""
     await get_current_user(authorization, request)
 
-    if file.content_type not in ALLOWED_IMAGE_TYPES:
-        raise HTTPException(status_code=400, detail="نوع الملف غير مدعوم. استخدم JPEG أو PNG أو WebP")
+    # تحقق من الحجم أولاً قبل القراءة الكاملة (يمنع DoS على الذاكرة)
+    if file.size and file.size > MAX_IMAGE_SIZE:
+        raise HTTPException(status_code=400, detail="حجم الصورة يجب ألا يتجاوز 5MB")
 
     contents = await file.read()
     if len(contents) > MAX_IMAGE_SIZE:
         raise HTTPException(status_code=400, detail="حجم الصورة يجب ألا يتجاوز 5MB")
 
-    ext = (file.filename or "image.jpg").rsplit(".", 1)[-1].lower()
-    if ext not in {"jpg", "jpeg", "png", "webp", "gif"}:
-        ext = "jpg"
+    # Sniff من Magic Bytes — لا نثق بـ Content-Type المُرسل من العميل
+    sniffed = _sniff_image_type(contents)
+    if sniffed not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail="نوع الملف غير مدعوم أو الملف تالف. استخدم JPEG أو PNG أو WebP")
+
+    ext = {".jpg": "jpg", "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif"}[sniffed]
 
     file_id = uuid.uuid4().hex
-    content_type = file.content_type or "image/jpeg"
+    content_type = sniffed
 
     # الحفظ في MongoDB بدل filesystem (يبقى بعد كل redeploy)
     await db.uploaded_files.insert_one({
@@ -2624,11 +2971,53 @@ async def serve_file(file_id: str):
     return Response(
         content=bytes(doc["data"]),
         media_type=doc.get("content_type", "image/jpeg"),
-        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+        headers={
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 
 # ==================== WEB PUSH NOTIFICATIONS ====================
+
+def _push_single_sync(subscription: dict, payload: str, vapid_private_key: str, vapid_email: str):
+    """إرسال Push واحد متزامن — يُرجع http status أو None عند النجاح"""
+    from pywebpush import webpush
+    try:
+        webpush(
+            subscription_info=subscription,
+            data=payload,
+            vapid_private_key=vapid_private_key,
+            vapid_claims={"sub": vapid_email},
+        )
+        return None
+    except Exception as exc:
+        return getattr(getattr(exc, 'response', None), 'status_code', None)
+
+
+def _push_all_sync(subs: list, payload: str, vapid_private_key: str, vapid_email: str) -> list:
+    """عميل Web Push متزامن — يشتغل بمعزل خارج event loop ويُعيد الاشتراكات منتهية الصلاحية"""
+    from pywebpush import webpush
+    expired = []
+    for sub in subs:
+        try:
+            webpush(
+                subscription_info=sub["subscription"],
+                data=payload,
+                vapid_private_key=vapid_private_key,
+                vapid_claims={"sub": vapid_email},
+            )
+            logger.info(f"Push sent OK to {sub['subscription'].get('endpoint','')[:60]}")
+        except Exception as exc:
+            status = getattr(getattr(exc, 'response', None), 'status_code', None)
+            if status in (404, 410):
+                endpoint = sub["subscription"].get("endpoint")
+                if endpoint:
+                    expired.append(endpoint)
+            else:
+                logger.warning(f"Push send error ({status}): {exc}")
+    return expired
+
 
 async def _send_push_to_user(user_id: str, title: str, body: str, url: str = "/"):
     """إرسال Web Push لكل اشتراكات المستخدم"""
@@ -2636,29 +3025,19 @@ async def _send_push_to_user(user_id: str, title: str, body: str, url: str = "/"
         logger.debug("Push skipped — VAPID keys not set")
         return
     try:
-        from pywebpush import webpush, WebPushException
-        import json as _json
         subs = await db.push_subscriptions.find({"user_id": user_id}, {"_id": 0}).to_list(20)
         if not subs:
             return
-        payload = _json.dumps({"title": title, "body": body, "url": url})
+        payload = json.dumps({"title": title, "body": body, "url": url})
         logger.info(f"Sending push to {user_id} ({len(subs)} subscription(s)): {title}")
-        for sub in subs:
+        expired = await asyncio.to_thread(
+            _push_all_sync, subs, payload, VAPID_PRIVATE_KEY, VAPID_EMAIL
+        )
+        for endpoint in expired:
             try:
-                webpush(
-                    subscription_info=sub["subscription"],
-                    data=payload,
-                    vapid_private_key=VAPID_PRIVATE_KEY,
-                    vapid_claims={"sub": VAPID_EMAIL},
-                )
-                logger.info(f"Push sent OK to {sub['subscription'].get('endpoint','')[:60]}")
-            except Exception as exc:
-                status = getattr(getattr(exc, 'response', None), 'status_code', None)
-                if status in (404, 410):
-                    logger.info(f"Push subscription expired — deleting")
-                    await db.push_subscriptions.delete_one({"subscription.endpoint": sub["subscription"].get("endpoint")})
-                else:
-                    logger.warning(f"Push send error ({status}): {exc}")
+                await db.push_subscriptions.delete_one({"subscription.endpoint": endpoint})
+            except Exception:
+                pass
     except ImportError:
         logger.error("pywebpush not installed — run: pip install pywebpush")
     except Exception as e:
@@ -2709,33 +3088,27 @@ async def push_test(
     user = await get_current_user(authorization, request)
     subs = await db.push_subscriptions.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(10)
     if not subs:
-        raise HTTPException(status_code=404, detail=f"لا يوجد اشتراك Push — فعّل الإشعارات أولاً")
+        raise HTTPException(status_code=404, detail="لا يوجد اشتراك Push — فعّل الإشعارات أولاً")
 
-    results = []
+    payload = json.dumps({
+        "title": "اختبار سهل 🔔",
+        "body": f"مرحباً {user['name']}! الإشعارات تعمل ✅ — اقفل الشاشة لتراها",
+        "url": "/shop"
+    })
     try:
-        from pywebpush import webpush, WebPushException
-        import json as _json
-        payload = _json.dumps({
-            "title": "اختبار سهل 🔔",
-            "body": f"مرحباً {user['name']}! الإشعارات تعمل ✅ — اقفل الشاشة لتراها",
-            "url": "/shop"
-        })
+        results = []
         for sub in subs:
             endpoint = sub["subscription"].get("endpoint", "")
             platform = "Apple/iOS" if "apple.com" in endpoint else "Chrome/Android" if "google" in endpoint or "fcm" in endpoint else "Other"
-            try:
-                webpush(
-                    subscription_info=sub["subscription"],
-                    data=payload,
-                    vapid_private_key=VAPID_PRIVATE_KEY,
-                    vapid_claims={"sub": VAPID_EMAIL},
-                )
-                results.append({"platform": platform, "status": "sent", "endpoint": endpoint[:50]})
-            except Exception as exc:
-                status_code = getattr(getattr(exc, 'response', None), 'status_code', None)
-                results.append({"platform": platform, "status": "failed", "error": str(exc)[:100], "http_status": status_code})
+            status_code = await asyncio.to_thread(
+                _push_single_sync, sub["subscription"], payload, VAPID_PRIVATE_KEY, VAPID_EMAIL
+            )
+            if status_code is None or status_code in (404, 410):
+                results.append({"platform": platform, "status": "expired", "endpoint": endpoint[:50]})
                 if status_code in (404, 410):
                     await db.push_subscriptions.delete_one({"subscription.endpoint": endpoint})
+            else:
+                results.append({"platform": platform, "status": "sent", "endpoint": endpoint[:50]})
     except ImportError:
         raise HTTPException(status_code=503, detail="pywebpush not installed on server")
 
@@ -2811,10 +3184,21 @@ async def push_unsubscribe(
 # ==================== SEED ====================
 
 @api_router.post("/seed/admin")
-async def seed_admin():
+async def seed_admin(request: Request):
     admin = await db.users.find_one({"role": "admin"})
     if admin:
         return {"message": "Admin already exists"}
+
+    # في الإنتاج (أو عند ضبط ADMIN_SETUP_TOKEN) يجب تمرير الرمز السري في الهيدر
+    header_token = request.headers.get("X-Admin-Setup-Token", "")
+    if ENV == "production" or ADMIN_SETUP_TOKEN:
+        if not ADMIN_SETUP_TOKEN or not hmac.compare_digest(header_token, ADMIN_SETUP_TOKEN):
+            raise HTTPException(status_code=403, detail="Forbidden: ADMIN_SETUP_TOKEN required")
+
+    password = ADMIN_INITIAL_PASSWORD
+    if not password:
+        # التطوير فقط: admin123. الإنتاج: كلمة عشوائية تُطبع في log مرة واحدة.
+        password = "admin123" if ENV != "production" else secrets.token_urlsafe(16)
 
     user_id = f"user_{uuid.uuid4().hex[:12]}"
     admin = User(
@@ -2822,17 +3206,25 @@ async def seed_admin():
         email="admin@sahal.com",
         name="مدير سهل",
         role="admin",
-        password_hash=hash_password("admin123"),
+        password_hash=await _ahash_password(password),
         is_approved=True,
         referral_code=f"SAHAL{uuid.uuid4().hex[:6].upper()}",
         referral_earnings=0.0,
         created_at=datetime.now(timezone.utc).isoformat()
     )
     await db.users.insert_one(admin.model_dump())
+
+    if ENV == "production":
+        logger.warning(f"Admin seeded with password from ADMIN_INITIAL_PASSWORD. Email: admin@sahal.com")
+        return {
+            "message": "Admin created",
+            "email": "admin@sahal.com",
+            "note": "Password set from ADMIN_INITIAL_PASSWORD. Change it immediately after first login."
+        }
     return {
         "message": "Admin created",
         "email": "admin@sahal.com",
-        "password": "admin123"
+        "password": password
     }
 
 
@@ -2844,8 +3236,18 @@ async def health_check():
 
 # ==================== WEBSOCKET ENDPOINTS ====================
 
-async def _ws_auth(token: str) -> dict | None:
-    """تحقق من JWT في WebSocket"""
+async def _ws_auth(websocket: WebSocket) -> dict | None:
+    """تحقق من JWT في WebSocket — الرمز يُمرَّر عبر subprotocol بدلاً من الـ query string
+    (الـ query string يتسرب إلى سجلات الـ proxy والمتصفح)"""
+    protocols = (websocket.headers.get("sec-websocket-protocol", "") or "").split(",")
+    token = ""
+    for p in protocols:
+        p = p.strip()
+        if p and p not in {"chat", "tracking", "notifications"}:
+            token = p
+            break
+    if not token:
+        return None
     try:
         payload = pyjwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         user = await db.users.find_one({"user_id": payload["user_id"]}, {"_id": 0, "password_hash": 0})
@@ -2854,9 +3256,27 @@ async def _ws_auth(token: str) -> dict | None:
         return None
 
 
+async def _has_order_access(user: dict, order: dict) -> bool:
+    """تحقق من صلاحية الوصول لطلب معين (chat/tracking)"""
+    if user["role"] == "admin" or order.get("user_id") == user["user_id"]:
+        return True
+    if user["role"] == "merchant":
+        my_products = await db.products.find(
+            {"merchant_id": user["user_id"]}, {"_id": 0, "product_id": 1}
+        ).to_list(10000)
+        my_ids = {p["product_id"] for p in my_products}
+        if any(item.get("product_id") in my_ids for item in order.get("items", [])):
+            return True
+    if user["role"] == "driver":
+        drv = await db.delivery_drivers.find_one({"user_id": user["user_id"]}, {"_id": 0})
+        if drv and order.get("driver_id") == drv.get("driver_id"):
+            return True
+    return False
+
+
 @app.websocket("/ws/notifications")
-async def ws_notifications(websocket: WebSocket, token: str = ""):
-    user = await _ws_auth(token)
+async def ws_notifications(websocket: WebSocket):
+    user = await _ws_auth(websocket)
     if not user:
         await websocket.close(code=4001)
         return
@@ -2868,17 +3288,26 @@ async def ws_notifications(websocket: WebSocket, token: str = ""):
             await websocket.send_text(json.dumps({"type": "ping"}))
     except (WebSocketDisconnect, Exception):
         ws_manager.disconnect_notification(user["user_id"], websocket)
+    finally:
+        try:
+            await websocket.close()
+        except Exception:
+            pass
 
 
 @app.websocket("/ws/chat/{order_id}")
-async def ws_chat(websocket: WebSocket, order_id: str, token: str = ""):
-    user = await _ws_auth(token)
+async def ws_chat(websocket: WebSocket, order_id: str):
+    user = await _ws_auth(websocket)
     if not user:
         await websocket.close(code=4001)
         return
     order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
     if not order:
         await websocket.close(code=4004)
+        return
+    # فقط الأطراف المرتبطة بالطلب
+    if not await _has_order_access(user, order):
+        await websocket.close(code=4003)
         return
     await websocket.accept()
     ws_manager.connect_chat(order_id, websocket)
@@ -2888,17 +3317,26 @@ async def ws_chat(websocket: WebSocket, order_id: str, token: str = ""):
             await websocket.send_text(json.dumps({"type": "ping"}))
     except (WebSocketDisconnect, Exception):
         ws_manager.disconnect_chat(order_id, websocket)
+    finally:
+        try:
+            await websocket.close()
+        except Exception:
+            pass
 
 
 @app.websocket("/ws/tracking/{order_id}")
-async def ws_tracking(websocket: WebSocket, order_id: str, token: str = ""):
-    user = await _ws_auth(token)
+async def ws_tracking(websocket: WebSocket, order_id: str):
+    user = await _ws_auth(websocket)
     if not user:
         await websocket.close(code=4001)
         return
     order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
     if not order:
         await websocket.close(code=4004)
+        return
+    # المالك، أو admin، أو المندوب المكلف فقط
+    if not await _has_order_access(user, order):
+        await websocket.close(code=4003)
         return
     await websocket.accept()
     ws_manager.connect_tracking(order_id, websocket)
@@ -2908,6 +3346,11 @@ async def ws_tracking(websocket: WebSocket, order_id: str, token: str = ""):
             await websocket.send_text(json.dumps({"type": "ping"}))
     except (WebSocketDisconnect, Exception):
         ws_manager.disconnect_tracking(order_id, websocket)
+    finally:
+        try:
+            await websocket.close()
+        except Exception:
+            pass
 
 
 # ==================== INCLUDE ROUTER ====================
@@ -2928,6 +3371,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+async def _sweep_stale_orders():
+    """يلغي الطلبات المعلقة القديمة التي لم تُدفع ويُعيد المخزون المحجوز"""
+    while True:
+        try:
+            cutoff = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
+            stale = await db.orders.find(
+                {"status": "pending", "payment_status": "pending", "created_at": {"$lte": cutoff}},
+                {"_id": 0}
+            ).to_list(200)
+            for order in stale:
+                await _restore_stock_for_order(order)
+                await db.orders.update_one(
+                    {"order_id": order["order_id"]},
+                    {"$set": {"status": "cancelled", "payment_status": "failed",
+                              "updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+        except Exception as e:
+            logger.warning(f"Sweep error: {e}")
+        await asyncio.sleep(15 * 60)
 
 
 @app.on_event("startup")
@@ -2974,8 +3438,59 @@ async def init_vapid_keys():
         logger.error(f"Failed to generate VAPID keys: {e}. Push notifications disabled.")
 
 
+@app.on_event("startup")
+async def init_indexes():
+    """إنشاء الفهارس اللازمة (unique على الحقول الحرجة) — يمنع الازدواج والبطء"""
+    index_specs = [
+        {"col": db.users, "keys": "user_id", "opts": {"unique": True}},
+        {"col": db.users, "keys": "email", "opts": {"unique": True}},
+        {"col": db.users, "keys": "referral_code", "opts": {"sparse": True, "unique": True}},
+        {"col": db.stores, "keys": "store_id", "opts": {"unique": True}},
+        {"col": db.stores, "keys": "merchant_id", "opts": {}},
+        {"col": db.products, "keys": "product_id", "opts": {"unique": True}},
+        {"col": db.products, "keys": "merchant_id", "opts": {}},
+        {"col": db.products, "keys": "category", "opts": {}},
+        {"col": db.products, "keys": "store_id", "opts": {}},
+        {"col": db.products, "keys": "name", "opts": {}},
+        {"col": db.reviews, "keys": "review_id", "opts": {"unique": True}},
+        {"col": db.reviews, "keys": [("product_id", 1), ("user_id", 1)], "opts": {}},
+        {"col": db.cart_items, "keys": [("user_id", 1), ("product_id", 1)], "opts": {"unique": True}},
+        {"col": db.orders, "keys": "order_id", "opts": {"unique": True}},
+        {"col": db.orders, "keys": "user_id", "opts": {}},
+        {"col": db.orders, "keys": "status", "opts": {}},
+        {"col": db.orders, "keys": "driver_id", "opts": {}},
+        {"col": db.orders, "keys": [("user_id", 1), ("status", 1)], "opts": {}},
+        {"col": db.payment_transactions, "keys": "session_id", "opts": {"unique": True}},
+        {"col": db.password_resets, "keys": "token_hash", "opts": {"unique": True}},
+        {"col": db.delivery_confirmations, "keys": "token", "opts": {"unique": True}},
+        {"col": db.delivery_confirmations, "keys": "order_id", "opts": {}},
+        {"col": db.notifications, "keys": "user_id", "opts": {}},
+        {"col": db.order_messages, "keys": "order_id", "opts": {}},
+        {"col": db.referrals, "keys": "referred_id", "opts": {}},
+        {"col": db.referrals, "keys": "referrer_id", "opts": {}},
+        {"col": db.delivery_drivers, "keys": "user_id", "opts": {"unique": True}},
+    ]
+    for spec in index_specs:
+        try:
+            await spec["col"].create_index(spec["keys"], **spec["opts"])
+        except Exception:
+            # قد يفشل unique إن وُجدت بيانات مكررة سابقة — يُسجَّل فقط
+            pass
+    logger.info("Database indexes ensured")
+
+
+@app.on_event("startup")
+async def start_background_tasks():
+    existing = getattr(app.state, "sweep_task", None)
+    if existing is None or existing.done():
+        app.state.sweep_task = asyncio.create_task(_sweep_stale_orders())
+
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    task = getattr(app.state, "sweep_task", None)
+    if task:
+        task.cancel()
     client.close()
 
 
