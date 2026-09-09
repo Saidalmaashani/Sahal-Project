@@ -14,10 +14,6 @@ const OrderSuccess = () => {
 
   useEffect(() => {
     if (!sessionId) { navigate('/shop'); return; }
-    checkPaymentStatus();
-  }, [sessionId]);
-
-  const checkPaymentStatus = async () => {
     let attempts = 0;
     const interval = setInterval(async () => {
       if (attempts >= 5) { clearInterval(interval); setChecking(false); return; }
@@ -30,7 +26,7 @@ const OrderSuccess = () => {
       attempts++;
     }, 2000);
     return () => clearInterval(interval);
-  };
+  }, [sessionId]);
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center px-4">

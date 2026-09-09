@@ -26,13 +26,12 @@ const StoreDetail = () => {
     try {
       const [storesRes, productsRes] = await Promise.all([
         api.get("/stores"),
-        api.get("/products")
+        api.get("/products", { params: { store_id: storeId } })
       ]);
       const found = storesRes.data.find(s => s.store_id === storeId);
       if (!found) { navigate("/shop"); return; }
       setStore(found);
-      const storeProducts = productsRes.data.filter(p => p.store_id === storeId);
-      setProducts(storeProducts);
+      setProducts(productsRes.data);
     } catch { toast.error("فشل التحميل"); }
     finally { setLoading(false); }
   };

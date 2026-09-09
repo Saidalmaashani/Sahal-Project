@@ -58,8 +58,16 @@ const PaymentPage = () => {
         delivery_lng: deliveryLocation?.lng || null,
       });
 
-      // 2) تأكيد الدفع فوراً (mock payment)
-      await api.get(`/payment/status/${response.data.session_id}`);
+      const { checkout_url, session_id } = response.data;
+
+      // 2) إذا رُبط Stripe حقيقياً — اذهب لصفحة الدفع الآمنة عند Stripe
+      if (checkout_url && checkout_url.startsWith('http')) {
+        window.location.href = checkout_url;
+        return;
+      }
+
+      // 3) وضع التطوير (mock) — تأكيد فوري
+      await api.get(`/payment/status/${session_id}`);
 
       // الطلب يتأكد تلقائياً من payment/status
 

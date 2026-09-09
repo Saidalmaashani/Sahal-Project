@@ -13,8 +13,9 @@ export function useWebSocket({ path, token, onMessage, enabled = true }) {
   const connect = useCallback(() => {
     if (!enabled || !token || !mountedRef.current) return;
 
-    const url = `${WS_BASE}${path}?token=${token}`;
-    const ws = new WebSocket(url);
+    // الرمز يُمرَّر عبر subprotocol بدلاً من query string (لا يتسرب للسجلات)
+    const url = `${WS_BASE}${path}`;
+    const ws = new WebSocket(url, [token]);
     wsRef.current = ws;
 
     ws.onopen = () => {

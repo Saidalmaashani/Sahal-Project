@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { WishlistProvider } from './contexts/WishlistContext';
@@ -8,29 +8,29 @@ import PushPrompt from './components/PushPrompt';
 import { AnimatePresence, motion } from 'framer-motion';
 import '@/App.css';
 
-// Pages
-import Landing from './pages/Landing';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import AuthCallback from './pages/AuthCallback';
-import Shop from './pages/Shop';
-import ProductDetail from './pages/ProductDetail';
-import Cart from './pages/Cart';
-import OrderSuccess from './pages/OrderSuccess';
-import Referrals from './pages/Referrals';
-import OrderTracking from './pages/OrderTracking';
-import AdminDashboard from './pages/AdminDashboard';
-import MerchantDashboard from './pages/MerchantDashboard';
-import DriverDashboard from './pages/DriverDashboard';
-import MerchantProfile from './pages/MerchantProfile';
-import PaymentPage from './pages/PaymentPage';
-import StoreDetail from './pages/StoreDetail';
-import MyOrders from './pages/MyOrders';
-import CustomerProfile from './pages/CustomerProfile';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import WishlistPage from './pages/WishlistPage';
-import DeliveryConfirmPage from './pages/DeliveryConfirmPage';
+// Lazy-loaded pages → أصغر bundle مبدئي وتحميل أسرع
+const Landing = lazy(() => import('./pages/Landing'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const AuthCallback = lazy(() => import('./pages/AuthCallback'));
+const Shop = lazy(() => import('./pages/Shop'));
+const ProductDetail = lazy(() => import('./pages/ProductDetail'));
+const Cart = lazy(() => import('./pages/Cart'));
+const OrderSuccess = lazy(() => import('./pages/OrderSuccess'));
+const Referrals = lazy(() => import('./pages/Referrals'));
+const OrderTracking = lazy(() => import('./pages/OrderTracking'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const MerchantDashboard = lazy(() => import('./pages/MerchantDashboard'));
+const DriverDashboard = lazy(() => import('./pages/DriverDashboard'));
+const MerchantProfile = lazy(() => import('./pages/MerchantProfile'));
+const PaymentPage = lazy(() => import('./pages/PaymentPage'));
+const StoreDetail = lazy(() => import('./pages/StoreDetail'));
+const MyOrders = lazy(() => import('./pages/MyOrders'));
+const CustomerProfile = lazy(() => import('./pages/CustomerProfile'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const WishlistPage = lazy(() => import('./pages/WishlistPage'));
+const DeliveryConfirmPage = lazy(() => import('./pages/DeliveryConfirmPage'));
 
 const pageVariants = {
   initial: { opacity: 0, y: 10 },
@@ -51,11 +51,20 @@ function PageWrapper({ children }) {
   );
 }
 
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4338CA]" />
+    </div>
+  );
+}
+
 function AnimatedRoutes() {
   const location = useLocation();
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
+    <Suspense fallback={<PageLoader />}>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
         <Route path="/" element={<PageWrapper><Landing /></PageWrapper>} />
         <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
         <Route path="/register" element={<PageWrapper><Register /></PageWrapper>} />
@@ -79,8 +88,9 @@ function AnimatedRoutes() {
         <Route path="/wishlist" element={<PageWrapper><WishlistPage /></PageWrapper>} />
         <Route path="/confirm-delivery/:token" element={<DeliveryConfirmPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </AnimatePresence>
+        </Routes>
+      </AnimatePresence>
+    </Suspense>
   );
 }
 
