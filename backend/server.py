@@ -68,6 +68,8 @@ VAPID_PRIVATE_KEY  = os.environ.get('VAPID_PRIVATE_KEY', '')
 VAPID_PUBLIC_KEY   = os.environ.get('VAPID_PUBLIC_KEY', '')
 VAPID_EMAIL        = os.environ.get('VAPID_EMAIL', 'mailto:admin@sahal.com')
 ANTHROPIC_API_KEY  = os.environ.get('ANTHROPIC_API_KEY', '')
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
+OPENROUTER_MODEL   = os.environ.get('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-instruct:free')
 
 PLATFORM_FEE = 0.07   # 7% إجمالي
 ADMIN_FEE    = 0.02   # 2% للمدير
@@ -2846,7 +2848,28 @@ async def send_chat_message(
     history_messages.append({"role": "user", "content": message})
 
     response_text = ""
-    if ANTHROPIC_API_KEY:
+    if OPENROUTER_API_KEY:
+        try:
+            # OpenRouter — واجهة متوافقة مع OpenAI chat completions
+            async with httpx.AsyncClient(timeout=60) as http:
+                or_resp = await http.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": OPENROUTER_MODEL,
+                        "max_tokens": 512,
+                        "messages": [{"role": "system", "content": system_prompt}] + history_messages,
+                    },
+                )
+                or_json = or_resp.json()
+            response_text = or_json["choices"][0]["message"]["content"]
+        except Exception as e:
+            logger.warning(f"OpenRouter API error: {e}")
+            response_text = _fallback_response(message)
+    elif ANTHROPIC_API_KEY:
         try:
             import anthropic as _anthropic
             client = _anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
