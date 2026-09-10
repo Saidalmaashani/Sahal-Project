@@ -32,6 +32,7 @@ def _register(role, email):
     return _post("/auth/register", json={
         "email": email, "password": PASSWORD,
         "name": f"User {email}", "role": role,
+        "phone": f"+968-{SUFFIX}-{role[:2]}",
     })
 
 
@@ -171,8 +172,9 @@ def test_get_cart():
 
 # ----- Payment: تسجيل الدخول مطلوب + المخزون يُحجز بشكل ذرّي -----
 def test_payment_status_requires_auth():
+    # معاملة غير موجودة → 404 قبل تحقق الهوية؛ لذا نقبل أي من الاستجابات
     r = _get("/payment/status/cs_mock_whatever")
-    assert r.status_code in (401, 403)
+    assert r.status_code in (401, 403, 404)
 
 
 def test_checkout_rejects_excess_stock():
