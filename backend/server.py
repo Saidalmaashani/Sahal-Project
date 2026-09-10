@@ -72,8 +72,7 @@ OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 OPENROUTER_MODEL   = os.environ.get('OPENROUTER_MODEL', 'google/gemma-4-31b-it:free')
 OPENROUTER_FALLBACK_MODELS = [
     'google/gemma-4-26b-a4b-it:free',
-    'nvidia/nemotron-3-super-120b-a12b:free',
-    'nex-agi/nex-n2.5-pro:free',
+    'google/gemma-4-31b-it:free',
 ]
 
 PLATFORM_FEE = 0.07   # 7% إجمالي
