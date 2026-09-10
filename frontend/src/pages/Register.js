@@ -223,10 +223,10 @@ const Register = () => {
               style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#475569', fontSize: '14px', padding: 0 }}>
               ← رجوع
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: 32, height: 32, borderRadius: '8px', background: 'linear-gradient(135deg,#4338CA,#F97316)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '16px' }}>س</div>
-              <span style={{ fontWeight: 700, color: '#4338CA' }}>سهل</span>
-            </div>
+<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <img src="/logo.png" alt="سهل" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
+                <span style={{ fontWeight: 700, color: '#4338CA' }}>سهل</span>
+              </div>
             <button onClick={() => navigate('/login')} style={{ border: 'none', background: 'none', color: '#4338CA', fontWeight: 600, cursor: 'pointer', fontSize: '14px' }}>دخول</button>
           </div>
 

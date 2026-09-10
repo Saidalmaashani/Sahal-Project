@@ -91,9 +91,7 @@ const PaymentPage = () => {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
-          <div className="h-10 w-10 bg-gradient-to-br from-[#4338CA] to-[#F97316] rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xl">س</span>
-          </div>
+          <img src="/logo.png" alt="سهل" style={{ height: 40, width: 'auto', objectFit: 'contain' }} className="flex-shrink-0" />
           <div>
             <span className="text-2xl font-bold text-[#4338CA]">سهل</span>
             <span className="text-sm text-[#475569] mr-2">| إتمام الشراء</span>

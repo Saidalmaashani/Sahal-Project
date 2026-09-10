@@ -35,13 +35,8 @@ const ForgotPassword = () => {
 
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{
-            width: '60px', height: '60px', borderRadius: '14px',
-            background: 'linear-gradient(135deg,#4338CA,#7C3AED)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '28px', fontWeight: 700, color: '#fff',
-            margin: '0 auto 12px', boxShadow: '0 8px 24px rgba(67,56,202,0.3)',
-          }}>س</div>
+          <img src="/logo.png" alt="سهل"
+            style={{ height: '70px', width: 'auto', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />
           <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', margin: 0 }}>نسيت كلمة المرور؟</h1>
           <p style={{ fontSize: '14px', color: '#475569', marginTop: '6px' }}>
             أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين

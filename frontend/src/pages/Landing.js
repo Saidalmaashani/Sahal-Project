@@ -47,7 +47,7 @@ const Landing = () => {
             </div>
             <div className="hidden lg:block">
               <div className="aspect-square bg-gradient-to-br from-[#4338CA]/10 to-[#F97316]/10 rounded-3xl flex items-center justify-center">
-                <ShoppingBag className="h-48 w-48 text-[#4338CA] opacity-30" />
+                <img src="/logo.png" alt="سهل" style={{ height: '210px', width: 'auto', objectFit: 'contain' }} />
               </div>
             </div>
           </div>
