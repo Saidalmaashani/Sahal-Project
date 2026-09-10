@@ -68,6 +68,8 @@ VAPID_PRIVATE_KEY  = os.environ.get('VAPID_PRIVATE_KEY', '')
 VAPID_PUBLIC_KEY   = os.environ.get('VAPID_PUBLIC_KEY', '')
 VAPID_EMAIL        = os.environ.get('VAPID_EMAIL', 'mailto:admin@sahal.com')
 ANTHROPIC_API_KEY  = os.environ.get('ANTHROPIC_API_KEY', '')
+GEMINI_API_KEY     = os.environ.get('GEMINI_API_KEY', '')
+GEMINI_MODEL       = os.environ.get('GEMINI_MODEL', 'gemini-3.6-flash')
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 OPENROUTER_MODEL   = os.environ.get('OPENROUTER_MODEL', 'google/gemma-4-31b-it:free')
 OPENROUTER_FALLBACK_MODELS = [
@@ -2852,7 +2854,34 @@ async def send_chat_message(
     history_messages.append({"role": "user", "content": message})
 
     response_text = ""
-    if OPENROUTER_API_KEY:
+    if GEMINI_API_KEY:
+        # Gemini — GenerateContent (نموذج حر غير تفكيري، رد عربي نظيف)
+        try:
+            gemini_contents = []
+            for turn in recent_chat:
+                gemini_contents.append({"role": "user", "parts": [{"text": turn["message"]}]})
+                gemini_contents.append({"role": "model", "parts": [{"text": turn["response"]}]})
+            gemini_contents.append({"role": "user", "parts": [{"text": message}]})
+            gemini_body = {
+                "systemInstruction": {"parts": [{"text": system_prompt}]},
+                "contents": gemini_contents,
+                "generationConfig": {"maxOutputTokens": 512},
+            }
+            async with httpx.AsyncClient(timeout=60) as http:
+                gm_url = ("https://generativelanguage.googleapis.com/v1beta/models/"
+                          f"{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}")
+                gm_resp = await http.post(gm_url, json=gemini_body)
+                gm_json = gm_resp.json()
+            if gm_resp.status_code == 200 and gm_json.get("candidates"):
+                response_text = gm_json["candidates"][0]["content"]["parts"][0].get("text", "").strip()
+            else:
+                logger.warning(f"Gemini API error: HTTP {gm_resp.status_code} "
+                               f"{gm_json.get('error', {}).get('message', '')}")
+                response_text = _fallback_response(message)
+        except Exception as e:
+            logger.warning(f"Gemini API error: {e}")
+            response_text = _fallback_response(message)
+    elif OPENROUTER_API_KEY:
         # OpenRouter — واجهة متوافقة مع OpenAI chat completions.
         # النماذج المجانية قد تُحظَر لحظياً (429/404) فنجرّب عدة نماذج بالترتيب.
         candidate_models = [OPENROUTER_MODEL] + OPENROUTER_FALLBACK_MODELS
