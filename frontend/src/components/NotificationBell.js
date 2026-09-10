@@ -368,34 +368,33 @@ const NotificationBell = () => {
               zIndex: 1000,
             }}
           />
-          {/* شريحة من الأسفل (Bottom Sheet) */}
+          {/* نافذة في منتصف الشاشة */}
           <motion.div
             key="sheet"
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+            initial={{ opacity: 0, scale: 0.92, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 16 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 340 }}
             style={{
-              position: 'fixed', left: 0, right: 0, bottom: 0,
+              position: 'fixed',
+              top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
               zIndex: 1001,
+              width: 'min(90vw, 380px)',
+              maxWidth: 'calc(100vw - 32px)',
+              maxHeight: 'min(78vh, 700px)',
               background: t.card,
               border: `1px solid ${t.border}`,
-              borderBottom: 'none',
-              borderRadius: '24px 24px 0 0',
-              boxShadow: '0 -12px 48px rgba(0,0,0,0.25)',
+              borderRadius: '20px',
+              boxShadow: '0 24px 80px rgba(0,0,0,0.35)',
               overflow: 'hidden',
               direction: 'rtl',
               fontFamily: 'Tajawal,Cairo,sans-serif',
-              maxHeight: 'min(84vh, 760px)',
               display: 'flex',
               flexDirection: 'column',
               paddingBottom: 'env(safe-area-inset-bottom)',
             }}
           >
-            {/* مقبض السحب */}
-            <div style={{ paddingTop: '10px', paddingBottom: '4px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
-              <div style={{ width: 44, height: 5, borderRadius: 3, background: '#CBD5E1' }} />
-            </div>
             <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
               {panelContent}
             </div>
