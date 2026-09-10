@@ -286,9 +286,7 @@ const Shop = () => {
         <div className="container mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-              <div className="h-9 w-9 bg-gradient-to-br from-[#4338CA] to-[#F97316] rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-lg">س</span>
-              </div>
+              <img src="/logo.png" alt="سهل" style={{ height: 36, width: 'auto', objectFit: 'contain' }} className="flex-shrink-0" />
               <div className="flex flex-col leading-none">
                 <span className="text-xl font-bold text-[#4338CA]">سهل</span>
                 <span className="text-[10px] text-[#475569] tracking-wider">SAHAL</span>

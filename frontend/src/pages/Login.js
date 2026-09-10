@@ -6,7 +6,7 @@ import { Input } from '../components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
-import { LogIn, Chrome } from 'lucide-react';
+import { Chrome } from 'lucide-react';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -43,7 +43,7 @@ const Login = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <LogIn className="h-12 w-12 text-[#4338CA]" />
+            <img src="/logo.png" alt="سهل" style={{ height: '90px', width: 'auto', objectFit: 'contain' }} />
           </div>
           <CardTitle className="text-2xl font-bold text-center">مرحباً بعودتك</CardTitle>
           <CardDescription className="text-center">سجل الدخول إلى حسابك في سهل</CardDescription>
