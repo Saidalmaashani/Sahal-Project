@@ -70,6 +70,11 @@ VAPID_EMAIL        = os.environ.get('VAPID_EMAIL', 'mailto:admin@sahal.com')
 ANTHROPIC_API_KEY  = os.environ.get('ANTHROPIC_API_KEY', '')
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 OPENROUTER_MODEL   = os.environ.get('OPENROUTER_MODEL', 'google/gemma-4-31b-it:free')
+OPENROUTER_FALLBACK_MODELS = [
+    'google/gemma-4-26b-a4b-it:free',
+    'nvidia/nemotron-3-super-120b-a12b:free',
+    'nex-agi/nex-n2.5-pro:free',
+]
 
 PLATFORM_FEE = 0.07   # 7% إجمالي
 ADMIN_FEE    = 0.02   # 2% للمدير
@@ -2849,25 +2854,35 @@ async def send_chat_message(
 
     response_text = ""
     if OPENROUTER_API_KEY:
-        try:
-            # OpenRouter — واجهة متوافقة مع OpenAI chat completions
-            async with httpx.AsyncClient(timeout=60) as http:
-                or_resp = await http.post(
-                    "https://openrouter.ai/api/v1/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "model": OPENROUTER_MODEL,
-                        "max_tokens": 512,
-                        "messages": [{"role": "system", "content": system_prompt}] + history_messages,
-                    },
-                )
-                or_json = or_resp.json()
-            response_text = or_json["choices"][0]["message"]["content"]
-        except Exception as e:
-            logger.warning(f"OpenRouter API error: {e}")
+        # OpenRouter — واجهة متوافقة مع OpenAI chat completions.
+        # النماذج المجانية قد تُحظَر لحظياً (429/404) فنجرّب عدة نماذج بالترتيب.
+        candidate_models = [OPENROUTER_MODEL] + OPENROUTER_FALLBACK_MODELS
+        response_text = ""
+        last_or_error = ""
+        for mdl in candidate_models:
+            try:
+                async with httpx.AsyncClient(timeout=60) as http:
+                    or_resp = await http.post(
+                        "https://openrouter.ai/api/v1/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "model": mdl,
+                            "max_tokens": 512,
+                            "messages": [{"role": "system", "content": system_prompt}] + history_messages,
+                        },
+                    )
+                    or_json = or_resp.json()
+                if or_resp.status_code == 200 and or_json.get("choices"):
+                    response_text = or_json["choices"][0]["message"]["content"]
+                    break
+                last_or_error = f"{mdl}: HTTP {or_resp.status_code} {or_json.get('error', {}).get('message', '')}"
+            except Exception as e:
+                last_or_error = f"{mdl}: {e}"
+        if not response_text:
+            logger.warning(f"OpenRouter API error: {last_or_error}")
             response_text = _fallback_response(message)
     elif ANTHROPIC_API_KEY:
         try:
