@@ -69,7 +69,7 @@ VAPID_PUBLIC_KEY   = os.environ.get('VAPID_PUBLIC_KEY', '')
 VAPID_EMAIL        = os.environ.get('VAPID_EMAIL', 'mailto:admin@sahal.com')
 ANTHROPIC_API_KEY  = os.environ.get('ANTHROPIC_API_KEY', '')
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
-OPENROUTER_MODEL   = os.environ.get('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-instruct:free')
+OPENROUTER_MODEL   = os.environ.get('OPENROUTER_MODEL', 'google/gemma-4-31b-it:free')
 
 PLATFORM_FEE = 0.07   # 7% إجمالي
 ADMIN_FEE    = 0.02   # 2% للمدير
