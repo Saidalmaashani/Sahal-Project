@@ -54,6 +54,13 @@ SMTP_PASSWORD  = os.environ.get('SMTP_PASSWORD', '')
 ENV                 = os.environ.get('ENV', 'development')
 ALLOW_MOCK_PAYMENTS = os.environ.get('ALLOW_MOCK_PAYMENTS', 'true').lower() in ('1', 'true', 'yes')
 ADMIN_SETUP_TOKEN   = os.environ.get('ADMIN_SETUP_TOKEN', '')
+
+def _mock_payments_allowed() -> bool:
+    """الدفع التجريبي: مسموح في التطوير، وفي الإنتاج فقط ما دامت
+    بوابة Stripe غير مفعلة (مرحلة الاختبار). ينطفئ تلقائياً عند ربط Stripe."""
+    if ENV == "development":
+        return ALLOW_MOCK_PAYMENTS
+    return ALLOW_MOCK_PAYMENTS and not STRIPE_API_KEY
 ADMIN_INITIAL_PASSWORD = os.environ.get('ADMIN_INITIAL_PASSWORD', '')
 
 # VAPID keys for Web Push Notifications
@@ -1372,8 +1379,8 @@ async def checkout(
         await db.cart_items.delete_many({"user_id": user["user_id"]})
         return {"checkout_url": session["url"], "session_id": session["id"], "order_id": order_id}
 
-    # الـ Mock للتطوير فقط — ممنوع في الإنتاج
-    if ENV != "development" or not ALLOW_MOCK_PAYMENTS:
+    # الـ Mock للتطوير/الاختبار فقط — يُغلق تلقائياً عند تفعيل Stripe
+    if not _mock_payments_allowed():
         await _restore_stock_for_order(order.model_dump())
         await db.orders.delete_one({"order_id": order_id})
         raise HTTPException(status_code=503, detail="الدفع غير مُعد بعد — راجع الإدارة")
@@ -1461,8 +1468,8 @@ async def get_payment_status(
             "metadata": stripe_data.get("metadata", {})
         }
 
-    # Mock path — متاح فقط للتطوير وليس في الإنتاج
-    if ENV != "development" or not ALLOW_MOCK_PAYMENTS:
+    # Mock path — للتطوير/الاختبار فقط، يُغلق عند ربط Stripe
+    if not _mock_payments_allowed():
         raise HTTPException(status_code=503, detail="الدفع غير مُعد — راجع الإدارة")
 
     if transaction["payment_status"] != "paid":
