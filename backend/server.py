@@ -3481,6 +3481,12 @@ async def init_indexes():
 
 @app.on_event("startup")
 async def start_background_tasks():
+    # تُعديل: لا نبدأ مهمة الفحص الدوري في بيئة الاختبار كي لا تُعيَّد الكرة على
+    # event loop مغلق عبر TestClient (يتركه pytest ينظّف بنفسه)
+    if DISABLE_RATE_LIMIT and os.environ.get("SAHAL_TEST_MODE", "false").lower() in ("1", "true", "yes"):
+        logger.info("Skipping periodic sweep task: running under test mode.")
+        app.state.sweep_task = None
+        return
     existing = getattr(app.state, "sweep_task", None)
     if existing is None or existing.done():
         app.state.sweep_task = asyncio.create_task(_sweep_stale_orders())
