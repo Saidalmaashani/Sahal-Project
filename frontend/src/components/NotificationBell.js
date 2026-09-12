@@ -368,36 +368,50 @@ const NotificationBell = () => {
               zIndex: 1000,
             }}
           />
-          {/* نافذة في منتصف الشاشة */}
+          {/* حاوية التركيز: تثبّت النافذة في منتصف الشاشة مهما كان حجمها */}
           <motion.div
-            key="sheet"
-            initial={{ opacity: 0, scale: 0.92, y: 16 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: 16 }}
-            transition={{ type: 'spring', damping: 26, stiffness: 340 }}
+            key="sheet-wrap"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             style={{
-              position: 'fixed',
-              top: '50%', left: '50%',
-              transform: 'translate(-50%, -50%)',
+              position: 'fixed', inset: 0,
               zIndex: 1001,
-              width: 'min(90vw, 380px)',
-              maxWidth: 'calc(100vw - 32px)',
-              maxHeight: 'min(78vh, 700px)',
-              background: t.card,
-              border: `1px solid ${t.border}`,
-              borderRadius: '20px',
-              boxShadow: '0 24px 80px rgba(0,0,0,0.35)',
-              overflow: 'hidden',
-              direction: 'rtl',
-              fontFamily: 'Tajawal,Cairo,sans-serif',
               display: 'flex',
-              flexDirection: 'column',
-              paddingBottom: 'env(safe-area-inset-bottom)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px',
+              pointerEvents: 'none',
             }}
           >
-            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-              {panelContent}
-            </div>
+            {/* نافذة في منتصف الشاشة */}
+            <motion.div
+              key="sheet"
+              initial={{ opacity: 0, scale: 0.92, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 16 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 340 }}
+              style={{
+                width: 'min(90vw, 380px)',
+                maxWidth: '100%',
+                maxHeight: 'min(82vh, 700px)',
+                background: t.card,
+                border: `1px solid ${t.border}`,
+                borderRadius: '20px',
+                boxShadow: '0 24px 80px rgba(0,0,0,0.35)',
+                overflow: 'hidden',
+                direction: 'rtl',
+                fontFamily: 'Tajawal,Cairo,sans-serif',
+                display: 'flex',
+                flexDirection: 'column',
+                pointerEvents: 'auto',
+                paddingBottom: 'env(safe-area-inset-bottom)',
+              }}
+            >
+              <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                {panelContent}
+              </div>
+            </motion.div>
           </motion.div>
         </>
       ) : (
