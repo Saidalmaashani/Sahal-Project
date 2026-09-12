@@ -279,3 +279,58 @@ def test_shopper_cannot_access_admin():
 def test_me_requires_auth():
     r = _get("/auth/me")
     assert r.status_code == 401
+
+
+# ----- Admin orders: قائمة محسّنة + ترقيم + تأكيد دفع -----
+def test_admin_orders_enriched():
+    r = _get("/admin/orders", headers=auth(state["admin_token"]))
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert isinstance(data, list)
+    order = next((o for o in data if o["order_id"] == state["order_id"]), None)
+    assert order is not None
+    assert isinstance(order["order_number"], int)
+    assert order["customer"]["name"]
+    assert order["customer"]["email"].endswith("@test.com")
+    assert isinstance(order["total_amount"], float)
+    assert len(order["items"]) >= 1
+    assert order["items"][0]["name"]
+    assert isinstance(order["allowed_transitions"], list)
+
+
+def test_admin_orders_search_and_filter():
+    r = _get("/admin/orders", params={"q": f"shopper_{SUFFIX}"}, headers=auth(state["admin_token"]))
+    assert r.status_code == 200
+    assert any(o["order_id"] == state["order_id"] for o in r.json())
+
+    r = _get("/admin/orders", params={"status": "confirmed"}, headers=auth(state["admin_token"]))
+    assert r.status_code == 200
+    for o in r.json():
+        assert o["status"] == "confirmed"
+
+
+def test_admin_orders_denied_for_shopper():
+    r = _get("/admin/orders", headers=auth(state["shopper_token"]))
+    assert r.status_code == 403
+
+
+def test_admin_updates_payment_status():
+    r = _patch(
+        f"/orders/{state['order_id']}/payment", params={"payment_status": "paid"},
+        headers=auth(state["admin_token"]),
+    )
+    assert r.status_code == 200, r.text
+
+    r = _patch(
+        f"/orders/{state['order_id']}/payment", params={"payment_status": "invalid"},
+        headers=auth(state["admin_token"]),
+    )
+    assert r.status_code == 400
+
+
+def test_shopper_cannot_update_payment():
+    r = _patch(
+        f"/orders/{state['order_id']}/payment", params={"payment_status": "paid"},
+        headers=auth(state["shopper_token"]),
+    )
+    assert r.status_code in (400, 403)

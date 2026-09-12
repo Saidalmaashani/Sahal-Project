@@ -15,7 +15,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/
 import { toast } from 'sonner';
 import {
   Users, Store, Package, DollarSign, ArrowRight, CheckCircle, XCircle,
-  Truck, Bell, Pencil, Trash2, UserPlus, Send, Radio
+  Truck, Bell, Pencil, Trash2, UserPlus, Send, Radio,
+  Search, Eye, Wallet, RefreshCw, ExternalLink, Hash, Boxes, ClipboardList, History, MapPin
 } from 'lucide-react';
 import SupportChat from '../components/SupportChat';
 
@@ -26,6 +27,28 @@ const getStatusArabic = (s) => ({
 }[s] || s);
 
 const getRoleArabic = (r) => ({ admin: 'مدير', merchant: 'تاجر', shopper: 'متسوق', driver: 'سائق' }[r] || r);
+
+const getPaymentStatusArabic = (p) => ({ paid: 'مدفوع', pending: 'قيد الدفع', failed: 'فشل الدفع' }[p] || p);
+
+const statusColor = (s) => ({
+  pending: 'bg-amber-100 text-amber-800',
+  confirmed: 'bg-blue-100 text-blue-800',
+  shipped: 'bg-purple-100 text-purple-800',
+  delivered: 'bg-emerald-100 text-emerald-800',
+  cancelled: 'bg-red-100 text-red-800',
+}[s] || 'bg-gray-100 text-gray-800');
+
+const paymentColor = (p) => ({
+  paid: 'bg-emerald-100 text-emerald-800',
+  pending: 'bg-amber-100 text-amber-800',
+  failed: 'bg-red-100 text-red-800',
+}[p] || 'bg-gray-100 text-gray-800');
+
+const ORDER_STATUS_KEYS = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
+
+const formatMoney = (v) => `ر.ع ${Number(v || 0).toFixed(3)}`;
+
+const formatDate = (d) => d ? new Date(d).toLocaleString('ar-OM', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 
 const ROLES = [
   { value: 'shopper', label: 'متسوق' },
@@ -302,6 +325,257 @@ const BroadcastDialog = ({ onClose }) => {
 };
 
 
+// ===== Dialog: تفاصيل الطلب وإجراءاته =====
+const OrderDetailsDialog = ({ order, drivers, onClose, onChanged }) => {
+  const [busy, setBusy] = useState(null);
+  const [driverPick, setDriverPick] = useState('');
+
+  const updateStatus = async (status) => {
+    if (!window.confirm(`هل تريد نقل الطلب إلى "${getStatusArabic(status)}"؟`)) return;
+    setBusy(`st_${status}`);
+    try {
+      await api.patch(`/orders/${order.order_id}/status`, null, { params: { status } });
+      toast.success('تم تحديث الحالة'); onChanged();
+    } catch (e) { toast.error(e.response?.data?.detail || 'فشل التحديث'); }
+    finally { setBusy(null); }
+  };
+
+  const updatePayment = async (ps) => {
+    setBusy(`pay_${ps}`);
+    try {
+      await api.patch(`/orders/${order.order_id}/payment`, null, { params: { payment_status: ps } });
+      toast.success('تم تحديث حالة الدفع'); onChanged();
+    } catch (e) { toast.error(e.response?.data?.detail || 'فشل'); }
+    finally { setBusy(null); }
+  };
+
+  const assignDriverToOrder = async () => {
+    if (!driverPick) return;
+    setBusy('driver');
+    try {
+      await api.post(`/deliveries/${order.order_id}/assign`, null, { params: { driver_id: driverPick } });
+      toast.success('تم تخصيص المندوب وبدء التوصيل'); setDriverPick(''); onChanged();
+    } catch (e) { toast.error(e.response?.data?.detail || 'فشل التخصيص'); }
+    finally { setBusy(null); }
+  };
+
+  const canAssign = String(order.status) === 'confirmed' && !order.driver?.driver_id;
+  const availableDrivers = drivers.filter((d) => d.is_available);
+
+  const statusBtnClass = (s) => ({
+    confirmed: 'border-blue-400 text-blue-700',
+    shipped: 'border-purple-400 text-purple-700',
+    delivered: 'border-emerald-400 text-emerald-700',
+    cancelled: 'border-red-300 text-red-600',
+  }[s] || '');
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent style={{
+        direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif', maxWidth: '780px',
+        maxHeight: '90vh', overflowY: 'auto'
+      }}>
+        <DialogHeader>
+          <DialogTitle className="flex flex-wrap items-center gap-2">
+            <Hash className="h-5 w-5 text-[#4338CA]" />
+            طلب رقم #{order.order_number || `…${String(order.order_id).slice(-6)}`}
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor(order.status)}`}>
+              {getStatusArabic(order.status)}
+            </span>
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${paymentColor(order.payment_status)}`}>
+              {getPaymentStatusArabic(order.payment_status)}
+            </span>
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 pt-2">
+          {/* العميل */}
+          <div style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '14px' }}>
+            <p className="flex items-center gap-2 text-sm font-bold text-[#4338CA] mb-2">
+              <Users className="h-4 w-4" />العميل
+            </p>
+            <div className="grid sm:grid-cols-2 gap-2 text-sm">
+              <div><span className="text-[#475569]">الاسم:</span> <span className="font-medium">{order.customer?.name || '—'}</span></div>
+              <div>
+                <span className="text-[#475569]">البريد:</span>{' '}
+                {order.customer?.email
+                  ? <a href={`mailto:${order.customer.email}`} dir="ltr" className="text-[#4338CA]">{order.customer.email}</a>
+                  : '—'}
+              </div>
+              <div>
+                <span className="text-[#475569]">الهاتف:</span>{' '}
+                {order.customer?.phone
+                  ? <a href={`tel:${order.customer.phone}`} dir="ltr" className="text-[#4338CA]">{order.customer.phone}</a>
+                  : '—'}
+              </div>
+              <div><span className="text-[#475569]">العنوان:</span> <span>{order.customer?.address || '—'}</span></div>
+            </div>
+          </div>
+
+          {/* المنتجات */}
+          <div style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '14px' }}>
+            <p className="flex items-center gap-2 text-sm font-bold text-[#7C3AED] mb-2">
+              <Boxes className="h-4 w-4" />المنتجات ({order.items?.length || 0})
+            </p>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead>المنتج</TableHead><TableHead>المتجر</TableHead>
+                  <TableHead>الكمية</TableHead><TableHead>السعر</TableHead><TableHead>الإجمالي</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {(order.items || []).map((it) => (
+                    <TableRow key={it.product_id}>
+                      <TableCell className="font-medium text-sm">{it.name || it.product_id}</TableCell>
+                      <TableCell className="text-sm text-[#475569]">{it.merchant_name || '—'}</TableCell>
+                      <TableCell>{it.quantity}</TableCell>
+                      <TableCell>{formatMoney(it.price)}</TableCell>
+                      <TableCell className="font-medium text-sm">{formatMoney(it.price * it.quantity)}</TableCell>
+                    </TableRow>
+                  ))}
+                  {(!order.items || order.items.length === 0) && (
+                    <TableRow><TableCell colSpan={5} className="text-center py-6 text-[#94A3B8]">لا توجد منتجات</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="flex justify-between items-center mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+              <span className="text-sm text-[#475569]">الإجمالي الفرعي</span>
+              <span className="text-sm">{formatMoney(order.subtotal ?? order.total_amount)}</span>
+            </div>
+            <div className="flex justify-between items-center mt-1">
+              <span className="text-[#475569]">الإجمالي النهائي</span>
+              <span className="font-bold text-[#10B981] text-base">{formatMoney(order.total_amount)}</span>
+            </div>
+          </div>
+
+          {/* التوصيل */}
+          <div style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '14px' }}>
+            <p className="flex items-center gap-2 text-sm font-bold text-[#F97316] mb-2">
+              <MapPin className="h-4 w-4" />التوصيل
+            </p>
+            <p className="text-sm">{order.delivery_address || '—'}</p>
+            {(order.delivery_lat != null || order.delivery_lng != null) && (
+              <p className="font-mono text-xs text-[#475569]" dir="ltr">
+                {order.delivery_lat ?? ''}, {order.delivery_lng ?? ''}
+              </p>
+            )}
+            <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+              <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                <span className="text-sm text-[#475569]">المندوب:</span>
+                {order.driver?.driver_id ? (
+                  <div className="text-sm">
+                    <span className="font-medium">{order.driver.name || 'مندوب'}</span>
+                    <span className="text-[#475569]">
+                      {order.driver.phone ? ` · ${order.driver.phone}` : ''}
+                      {order.driver.vehicle ? ` · ${order.driver.vehicle}` : ''}
+                      {order.driver.vehicle_number ? ` (${order.driver.vehicle_number})` : ''}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-sm text-[#E11D48] font-medium">غير مخصص</span>
+                )}
+              </div>
+              {canAssign && (
+                <div className="flex gap-2 flex-wrap items-center">
+                  <Select value={driverPick} onValueChange={setDriverPick}>
+                    <SelectTrigger className="w-[230px]"><SelectValue placeholder="اختر مندوباً متاحاً" /></SelectTrigger>
+                    <SelectContent>
+                      {availableDrivers.length === 0 && (
+                        <div className="px-3 py-2 text-xs text-[#475569]">لا يوجد مندوبون متاحون حالياً</div>
+                      )}
+                      {availableDrivers.map((dr) => (
+                        <SelectItem key={dr.driver_id} value={dr.driver_id}>{dr.name} ({dr.vehicle_type})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button size="sm" onClick={assignDriverToOrder} disabled={!driverPick || busy === 'driver'}>
+                    {busy === 'driver' ? 'جارٍ التخصيص...' : 'تخصيص وبدء التوصيل'}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* الأوقات */}
+          <div className="flex flex-wrap gap-4 text-xs text-[#475569]" style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 14px' }}>
+            <div className="flex items-center gap-1.5"><History className="h-3.5 w-3.5" />الإنشاء: {formatDate(order.created_at)}</div>
+            <div className="flex items-center gap-1.5"><RefreshCw className="h-3.5 w-3.5" />آخر تحديث: {formatDate(order.updated_at)}</div>
+          </div>
+
+          {/* الإجراءات الممكنة */}
+          <div style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '14px', background: 'var(--bg3)' }}>
+            <p className="flex items-center gap-2 text-sm font-bold text-[#10B981] mb-3">
+              <ClipboardList className="h-4 w-4" />الإجراءات الممكنة لهذا الطلب
+            </p>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="text-sm text-[#475569]">الخطوة القادمة:</span>
+                {order.allowed_transitions?.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {order.allowed_transitions.map((s) => (
+                      <Button key={s} size="sm" variant="outline" className={statusBtnClass(s)}
+                        disabled={busy === `st_${s}`} onClick={() => updateStatus(s)}>
+                        {busy === `st_${s}` ? 'جارٍ...' : getStatusArabic(s)}
+                      </Button>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-xs text-[#475569]">لا توجد خطوات — الطلب في حالة نهائية</span>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between flex-wrap gap-2 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+                <span className="text-sm text-[#475569]">حالة الدفع:</span>
+                <div className="flex flex-wrap gap-2">
+                  {order.payment_status !== 'paid' && (
+                    <Button size="sm" variant="outline" className="border-emerald-400 text-emerald-700"
+                      disabled={busy === 'pay_paid'} onClick={() => updatePayment('paid')}>
+                      {busy === 'pay_paid' ? 'جارٍ...' : <><Wallet className="h-3.5 w-3.5 ml-1" />تأكيد الدفع</>}
+                    </Button>
+                  )}
+                  {order.payment_status !== 'failed' && (
+                    <Button size="sm" variant="outline" className="border-red-300 text-red-600"
+                      disabled={busy === 'pay_failed'} onClick={() => updatePayment('failed')}>
+                      {busy === 'pay_failed' ? 'جارٍ...' : 'وضع كفشل'}
+                    </Button>
+                  )}
+                  {order.payment_status !== 'pending' && (
+                    <Button size="sm" variant="outline" disabled={busy === 'pay_pending'} onClick={() => updatePayment('pending')}>
+                      {busy === 'pay_pending' ? 'جارٍ...' : 'إرجاع لقيد الدفع'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between flex-wrap gap-2 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+                <span className="text-sm text-[#475569]">متابعة:</span>
+                <div className="flex gap-2 flex-wrap">
+                  <a href={`/track/${order.order_id}`} target="_blank" rel="noreferrer">
+                    <Button size="sm" variant="outline">
+                      <ExternalLink className="h-3.5 w-3.5 ml-1" />صفحة التتبع المباشر
+                    </Button>
+                  </a>
+                  <Button size="sm" variant="outline" onClick={onChanged} disabled={busy === 'refresh'}>
+                    <RefreshCw className="h-3.5 w-3.5 ml-1" />تحديث البيانات
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* المعرّف الداخلي */}
+          <div className="flex items-center justify-between text-xs text-[#475569] pt-1">
+            <span className="font-mono" dir="ltr">{order.order_id}</span>
+            <span>{formatMoney(order.total_amount)}</span>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+
 // ===== اللوحة الرئيسية =====
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -315,6 +589,9 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab]   = useState('users');
   const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState('');
+  const [orderQuery, setOrderQuery]     = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+  const [selectedOrder, setSelectedOrder]     = useState(null);
 
   // dialogs
   const [editUser, setEditUser]         = useState(null);
@@ -333,7 +610,7 @@ const AdminDashboard = () => {
     try {
       const [a, u, o, s, d, dr] = await Promise.all([
         api.get('/admin/analytics'), api.get('/admin/users'),
-        api.get('/orders'),          api.get('/admin/stores'),
+        api.get('/admin/orders'),      api.get('/admin/stores'),
         api.get('/admin/deliveries'), api.get('/admin/drivers')
       ]);
       setAnalytics(a.data); setUsers(u.data); setOrders(o.data);
@@ -368,19 +645,19 @@ const AdminDashboard = () => {
     } catch { toast.error('فشل'); }
   };
 
-  const updateOrderStatus = async (oid, status) => {
-    try {
-      await api.patch(`/orders/${oid}/status`, null, { params: { status } });
-      toast.success('تم التحديث'); fetchData();
-    } catch { toast.error('فشل'); }
-  };
-
   const assignDriver = async (oid, did) => {
     try {
       await api.post(`/deliveries/${oid}/assign`, null, { params: { driver_id: did } });
       toast.success('تم التخصيص'); fetchData();
     } catch { toast.error('فشل'); }
   };
+
+  // إبقاء نافذة التفاصيل محدّثة بعد أي إجراء
+  useEffect(() => {
+    if (!selectedOrder) return;
+    const fresh = orders.find((o) => o.order_id === selectedOrder.order_id);
+    if (fresh) setSelectedOrder(fresh);
+  }, [orders]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -402,6 +679,23 @@ const AdminDashboard = () => {
     shopper: 'bg-blue-100 text-blue-800',
     driver: 'bg-green-100 text-green-800',
   }[r] || 'bg-gray-100 text-gray-800');
+
+  const statusCounts = {};
+  ORDER_STATUS_KEYS.forEach((k) => { statusCounts[k] = orders.filter((o) => o.status === k).length; });
+  statusCounts.all = orders.length;
+
+  const q = orderQuery.trim().toLowerCase();
+  const filteredOrders = orders.filter((o) => {
+    if (orderStatusFilter !== 'all' && o.status !== orderStatusFilter) return false;
+    if (!q) return true;
+    const hay = [
+      String(o.order_number || ''), o.order_id, o.order_id.replace('order_', ''),
+      o.customer?.name || '', o.customer?.email || '', o.customer?.phone || '',
+      String(o.total_amount),
+      getStatusArabic(o.status), getPaymentStatusArabic(o.payment_status),
+    ].join(' ').toLowerCase();
+    return hay.includes(q);
+  });
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]" style={{ direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif' }}>
@@ -613,33 +907,93 @@ const AdminDashboard = () => {
           {/* ===== تبويب الطلبات ===== */}
           <TabsContent value="orders">
             <Card>
-              <CardHeader><CardTitle>جميع الطلبات ({orders.length})</CardTitle></CardHeader>
-              <CardContent className="overflow-x-auto">
-                <Table>
-                  <TableHeader><TableRow>
-                    <TableHead>رقم</TableHead><TableHead>المبلغ</TableHead>
-                    <TableHead>الحالة</TableHead><TableHead>الدفع</TableHead><TableHead>التاريخ</TableHead><TableHead>تعديل</TableHead>
-                  </TableRow></TableHeader>
-                  <TableBody>{orders.map((o) => (
-                    <TableRow key={o.order_id}>
-                      <TableCell className="font-mono text-xs" dir="ltr">{o.order_id.slice(-10)}</TableCell>
-                      <TableCell className="font-medium text-[#4338CA]">ر.ع {o.total_amount.toFixed(3)}</TableCell>
-                      <TableCell><span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{getStatusArabic(o.status)}</span></TableCell>
-                      <TableCell><span className={`px-2 py-1 rounded-full text-xs font-medium ${o.payment_status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{getStatusArabic(o.payment_status)}</span></TableCell>
-                      <TableCell className="text-xs text-[#475569]">{new Date(o.created_at).toLocaleDateString('ar-OM')}</TableCell>
-                      <TableCell>
-                        <Select value={o.status} onValueChange={(v) => updateOrderStatus(o.order_id, v)}>
-                          <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {['pending','confirmed','shipped','delivered','cancelled'].map(s => (
-                              <SelectItem key={s} value={s}>{getStatusArabic(s)}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                    </TableRow>
-                  ))}</TableBody>
-                </Table>
+              <CardHeader>
+                <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardList className="h-5 w-5 text-[#4338CA]" />إدارة الطلبات
+                    <span className="text-sm font-normal text-[#475569]">({orders.length} طلب)</span>
+                  </CardTitle>
+                  <div className="flex gap-2 flex-wrap w-full lg:w-auto">
+                    <div className="relative flex-1 lg:flex-none">
+                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
+                      <input
+                        value={orderQuery}
+                        onChange={(e) => setOrderQuery(e.target.value)}
+                        placeholder="بحث برقم الطلب أو العميل أو الحالة أو المبلغ..."
+                        style={{ padding: '8px 36px 8px 12px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '13px', fontFamily: 'Tajawal,sans-serif', outline: 'none', minWidth: '240px', background: 'var(--card)', color: 'var(--text)' }}
+                      />
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => { setOrderQuery(''); setOrderStatusFilter('all'); }}
+                      disabled={!orderQuery && orderStatusFilter === 'all'}>
+                      <RefreshCw className="h-3.5 w-3.5 ml-1" />مسح
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="pt-0">
+                {/* شرائح الفلترة حسب الحالة */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {[{ key: 'all', label: 'الكل' }, ...ORDER_STATUS_KEYS.map((k) => ({ key: k, label: getStatusArabic(k) }))].map(({ key, label }) => (
+                    <button key={key}
+                      onClick={() => setOrderStatusFilter(key)}
+                      style={key === orderStatusFilter
+                        ? { padding: '6px 14px', borderRadius: '999px', fontSize: '12.5px', fontWeight: 700, border: '1px solid #4338CA', background: 'linear-gradient(135deg,#4338CA,#7C3AED)', color: '#fff', cursor: 'pointer' }
+                        : { padding: '6px 14px', borderRadius: '999px', fontSize: '12.5px', fontWeight: 600, border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text2)', cursor: 'pointer' }}>
+                      {label} <span style={{ opacity: 0.8, marginInlineStart: 4 }}>({statusCounts[key] || 0})</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader><TableRow>
+                      <TableHead>رقم الطلب</TableHead><TableHead>العميل</TableHead><TableHead>المنتجات</TableHead>
+                      <TableHead>المبلغ</TableHead><TableHead>الدفع</TableHead><TableHead>الحالة</TableHead>
+                      <TableHead>التاريخ</TableHead><TableHead>تفاصيل</TableHead>
+                    </TableRow></TableHeader>
+                    <TableBody>
+                      {filteredOrders.map((o) => (
+                        <TableRow key={o.order_id} className="hover:bg-[#F8F9FA] cursor-pointer" onClick={() => setSelectedOrder(o)}>
+                          <TableCell>
+                            <span className="font-medium">#{o.order_number || `…${String(o.order_id).slice(-6)}`}</span>
+                          </TableCell>
+                          <TableCell>
+                            <p className="font-medium text-sm">{o.customer?.name || '—'}</p>
+                            {o.customer?.phone && <p className="text-xs text-[#475569]" dir="ltr">{o.customer.phone}</p>}
+                          </TableCell>
+                          <TableCell className="text-sm text-[#475569]">{o.item_count ?? o.items?.length ?? 0}</TableCell>
+                          <TableCell className="font-medium text-[#4338CA]">{formatMoney(o.total_amount)}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${paymentColor(o.payment_status)}`}>
+                              {getPaymentStatusArabic(o.payment_status)}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor(o.status)}`}>
+                              {getStatusArabic(o.status)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-xs text-[#475569]">{formatDate(o.created_at)}</TableCell>
+                          <TableCell>
+                            <button
+                              title="عرض التفاصيل والإجراءات"
+                              onClick={(e) => { e.stopPropagation(); setSelectedOrder(o); }}
+                              style={{ padding: '6px 10px', border: '1px solid #C7D2FE', borderRadius: '8px', background: '#EEF2FF', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#4338CA' }}>
+                              <Eye className="h-3.5 w-3.5" />عرض
+                            </button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {filteredOrders.length === 0 && (
+                        <TableRow><TableCell colSpan={8} className="text-center py-10">
+                          <p className="text-[#94A3B8] font-medium mb-1">لا توجد طلبات مطابقة</p>
+                          <p className="text-xs text-[#CBD5E1]">غيّر كلمة البحث أو الفلترة</p>
+                        </TableCell></TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -724,6 +1078,10 @@ const AdminDashboard = () => {
       {notifyUser  && <NotifyDialog   target={notifyUser} onClose={() => setNotifyUser(null)} />}
       {showAddUser && <AddUserDialog  onClose={() => setShowAddUser(false)}   onSaved={() => { setShowAddUser(false); fetchData(); }} />}
       {showBroadcast && <BroadcastDialog onClose={() => setShowBroadcast(false)} />}
+      {selectedOrder && (
+        <OrderDetailsDialog order={selectedOrder} drivers={drivers}
+          onClose={() => setSelectedOrder(null)} onChanged={() => fetchData()} />
+      )}
 
       <SupportChat />
     </div>

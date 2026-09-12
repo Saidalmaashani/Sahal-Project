@@ -23,6 +23,7 @@ import asyncio
 import json
 from pydantic import BaseModel
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import ReturnDocument
 import bcrypt as _bcrypt
 import jwt as pyjwt
 import httpx
@@ -94,6 +95,11 @@ ORDER_STATUS_TRANSITIONS = {
     "delivered": set(),
     "cancelled": set(),
 }
+ORDER_STATUS_AR = {
+    "pending": "قيد الانتظار", "confirmed": "مؤكد", "shipped": "قيد التوصيل",
+    "delivered": "تم التوصيل", "cancelled": "ملغى",
+}
+PAYMENT_STATUS_AR = {"pending": "قيد الدفع", "paid": "مدفوع", "failed": "فشل الدفع"}
 MAX_CART_QUANTITY = 99
 
 # Roles المسموح بالتسجيل الذاتي (admin يُنشأ فقط عبر seed/الإدارة)
@@ -294,6 +300,7 @@ class CartItem(BaseModel):
 
 class Order(BaseModel):
     order_id: str
+    order_number: Optional[int] = None
     user_id: str
     items: List[dict]
     total_amount: float
@@ -1331,8 +1338,23 @@ async def checkout(
 
     # أنشئ الطلب
     order_id = f"order_{uuid.uuid4().hex[:12]}"
+
+    # ترقيم تسلسلي (يدوّر عدّاداً مشتركاً يبدأ من عدد الطلبات الحالي)
+    order_count = await db.orders.count_documents({})
+    await db.counters.update_one(
+        {"_id": "order_number"},
+        {"$setOnInsert": {"value": order_count}},
+        upsert=True
+    )
+    counter = await db.counters.find_one_and_update(
+        {"_id": "order_number"},
+        {"$inc": {"value": 1}},
+        return_document=ReturnDocument.AFTER
+    )
+
     order = Order(
         order_id=order_id,
+        order_number=counter["value"],
         user_id=user["user_id"],
         items=order_items,
         total_amount=round(total, 3),
@@ -1663,6 +1685,96 @@ async def get_orders(authorization: Optional[str] = Header(None), request: Reque
     return orders
 
 
+# ==================== ADMIN ORDERS ====================
+
+@api_router.get("/admin/orders")
+async def admin_orders(authorization: Optional[str] = Header(None), request: Request = None):
+    """قائمة الطلبات الكاملة للمدير مع تفاصيل العميل/السائق/المتاجر وفلترة بحث وحالة ودفع"""
+    user = await get_current_user(authorization, request)
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="غير مصرح")
+
+    users = {u["user_id"]: u for u in await db.users.find({}, {"_id": 0}).to_list(10000)}
+    drivers = {d["driver_id"]: d for d in await db.delivery_drivers.find({}, {"_id": 0}).to_list(10000)}
+    products = {p["product_id"]: p for p in await db.products.find({}, {"_id": 0}).to_list(10000)}
+    merchants = {u["user_id"]: u for u in users.values() if u["role"] == "merchant"}
+
+    query = {}
+    status = (request.query_params.get("status") or "").strip()
+    payment = (request.query_params.get("payment") or "").strip()
+    if status:
+        query["status"] = status
+    if payment:
+        query["payment_status"] = payment
+
+    raw = await db.orders.find(query, {"_id": 0}).sort("created_at", -1).to_list(10000)
+
+    result = []
+    for o in raw:
+        order_items = []
+        for it in o.get("items", []):
+            prod = products.get(it["product_id"], {})
+            merch = merchants.get(prod.get("merchant_id"), {})
+            order_items.append({
+                "product_id": it["product_id"],
+                "name": it.get("name", prod.get("name", "منتج")),
+                "category": it.get("category", prod.get("category", "")),
+                "quantity": it.get("quantity", 1),
+                "price": it.get("price", prod.get("price", 0)),
+                "merchant_id": prod.get("merchant_id", ""),
+                "merchant_name": merch.get("name") or "—",
+            })
+        driver = drivers.get(o.get("driver_id"))
+        driver_user = users.get(driver.get("user_id")) if driver else None
+        customer = users.get(o.get("user_id"), {})
+        result.append({
+            "order_id": o["order_id"],
+            "order_number": o.get("order_number"),
+            "status": o.get("status", "pending"),
+            "payment_status": o.get("payment_status", "pending"),
+            "total_amount": o.get("total_amount", 0),
+            "created_at": o.get("created_at"),
+            "updated_at": o.get("updated_at"),
+            "delivery_address": o.get("delivery_address", ""),
+            "delivery_lat": o.get("delivery_lat"),
+            "delivery_lng": o.get("delivery_lng"),
+            "customer": {
+                "user_id": o.get("user_id"),
+                "name": customer.get("name") or "مستخدم محذوف",
+                "email": customer.get("email") or "",
+                "phone": customer.get("phone") or "",
+                "address": customer.get("address") or "",
+            },
+            "driver": {
+                "driver_id": o.get("driver_id"),
+                "name": (driver_user.get("name") or "") if driver_user else "",
+                "phone": (driver_user.get("phone") or "") if driver_user else "",
+                "vehicle": driver.get("vehicle_type", "") if driver else "",
+                "vehicle_number": driver.get("vehicle_number", "") if driver else "",
+                "available": driver.get("is_available", False) if driver else False,
+            },
+            "items": order_items,
+            "subtotal": round(sum(i.get("price", 0) * i.get("quantity", 0) for i in order_items), 3),
+            "allowed_transitions": sorted(ORDER_STATUS_TRANSITIONS.get(o.get("status", "pending"), set())),
+        })
+
+    q = (request.query_params.get("q") or "").strip().lower()
+    if q:
+        def _match(order: dict) -> bool:
+            haystack = " ".join(filter(None, [
+                str(order.get("order_number") or ""),
+                order["order_id"], order["order_id"].replace("order_", ""),
+                order["customer"]["name"], order["customer"]["email"], order["customer"]["phone"],
+                str(order["total_amount"]),
+                ORDER_STATUS_AR.get(order["status"], order["status"]),
+                PAYMENT_STATUS_AR.get(order["payment_status"], order["payment_status"]),
+            ])).lower()
+            return q in haystack
+        result = [o for o in result if _match(o)]
+
+    return result
+
+
 # ==================== ORDER CHAT ====================
 
 async def _order_chat_access(order_id: str, user: dict) -> dict:
@@ -1809,7 +1921,52 @@ async def update_order_status(
         {"order_id": order_id},
         {"$set": {"status": status, "updated_at": datetime.now(timezone.utc).isoformat()}}
     )
+
+    # إشعار للزبون عند تغيير الحالة
+    if status != current_status and order["user_id"] != user["user_id"]:
+        await _create_notification(
+            order["user_id"], "order_status",
+            "تحديث حالة الطلب",
+            f"تغيرت حالة الطلب إلى {ORDER_STATUS_AR.get(status, status)}",
+            "/my-orders"
+        )
+
     return {"message": "تم تحديث الطلب"}
+
+
+@api_router.patch("/orders/{order_id}/payment")
+async def update_order_payment_status(
+    order_id: str,
+    payment_status: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None
+):
+    """تعديل حالة الدفع للطلب (إداري) — يسمح بتأكيد الدفع أو تصحيحه"""
+    user = await get_current_user(authorization, request)
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="غير مصرح")
+
+    if payment_status not in {"paid", "pending", "failed"}:
+        raise HTTPException(status_code=400, detail="حالة دفع غير صالحة")
+
+    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="الطلب غير موجود")
+
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {"$set": {"payment_status": payment_status, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+
+    if payment_status != order.get("payment_status") and order["user_id"] != user["user_id"]:
+        await _create_notification(
+            order["user_id"], "order_payment",
+            "تحديث الدفع",
+            f"أصبحت حالة الدفع للطلب: {PAYMENT_STATUS_AR.get(payment_status, payment_status)}",
+            "/my-orders"
+        )
+
+    return {"message": "تم تحديث الدفع"}
 
 
 # ==================== DELIVERY ENDPOINTS ====================
