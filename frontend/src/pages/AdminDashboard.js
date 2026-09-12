@@ -77,7 +77,7 @@ const EditUserDialog = ({ target, onClose, onSaved }) => {
           </div>
           <div>
             <Label>البريد الإلكتروني</Label>
-            <Input value={target.email} disabled dir="ltr" style={{ background: '#F8FAFC', color: '#94A3B8' }} />
+            <Input value={target.email} disabled dir="ltr" style={{ background: 'var(--bg2)', color: 'var(--muted)' }} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -214,9 +214,9 @@ const NotifyDialog = ({ target, onClose }) => {
             <Label>نص الرسالة <span className="text-red-500">*</span></Label>
             <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
               placeholder="اكتب الرسالة هنا..." rows={4}
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '14px', fontFamily: 'Tajawal,sans-serif', resize: 'vertical', outline: 'none' }}
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', fontFamily: 'Tajawal,sans-serif', resize: 'vertical', outline: 'none' }}
               onFocus={e => e.target.style.borderColor = '#4338CA'}
-              onBlur={e => e.target.style.borderColor = '#E2E8F0'} />
+              onBlur={e => e.target.style.borderColor = 'var(--border)'} />
           </div>
           <div>
             <Label>رابط (اختياري)</Label>
@@ -278,9 +278,9 @@ const BroadcastDialog = ({ onClose }) => {
             <Label>نص الرسالة <span className="text-red-500">*</span></Label>
             <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
               placeholder="اكتب الرسالة هنا..." rows={4}
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '14px', fontFamily: 'Tajawal,sans-serif', resize: 'vertical', outline: 'none' }}
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', fontFamily: 'Tajawal,sans-serif', resize: 'vertical', outline: 'none' }}
               onFocus={e => e.target.style.borderColor = '#F97316'}
-              onBlur={e => e.target.style.borderColor = '#E2E8F0'} />
+              onBlur={e => e.target.style.borderColor = 'var(--border)'} />
           </div>
           <div>
             <Label>رابط (اختياري)</Label>
@@ -477,7 +477,7 @@ const AdminDashboard = () => {
                       value={search}
                       onChange={e => setSearch(e.target.value)}
                       placeholder="بحث بالاسم أو البريد..."
-                      style={{ padding: '7px 12px', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '13px', fontFamily: 'Tajawal,sans-serif', outline: 'none', minWidth: '180px' }}
+                      style={{ padding: '7px 12px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '13px', fontFamily: 'Tajawal,sans-serif', outline: 'none', minWidth: '180px' }}
                     />
                     <Button size="sm" className="bg-[#F97316] hover:bg-[#EA580C]"
                       onClick={() => setShowBroadcast(true)}>
@@ -576,7 +576,7 @@ const AdminDashboard = () => {
                     <TableRow key={s.store_id}>
                       <TableCell>
                         {s.logo ? (
-                          <img src={s.logo} alt={s.name} style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #E2E8F0' }} />
+                          <img src={s.logo} alt={s.name} style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }} />
                         ) : (
                           <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'linear-gradient(135deg,#4338CA,#7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <Store style={{ width: '18px', height: '18px', color: '#fff' }} />

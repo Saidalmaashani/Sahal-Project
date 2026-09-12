@@ -15,7 +15,7 @@ const ChartCard = ({ title, icon: Icon, color, children, loading }) => (
     initial={{ opacity: 0, y: 16 }}
     animate={{ opacity: 1, y: 0 }}
     style={{
-      background: '#fff', borderRadius: 16, border: '1px solid #E2E8F0',
+      background: 'var(--card)', borderRadius: 16, border: '1px solid var(--border)',
       padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
     }}
   >
@@ -23,10 +23,10 @@ const ChartCard = ({ title, icon: Icon, color, children, loading }) => (
       <div style={{ width: 34, height: 34, borderRadius: 10, background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Icon style={{ width: 17, height: 17, color }} />
       </div>
-      <h3 style={{ fontSize: 15, fontWeight: 700, color: '#0F172A', margin: 0 }}>{title}</h3>
+      <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: 0 }}>{title}</h3>
     </div>
     {loading ? (
-      <div style={{ height: 200, background: '#F8FAFC', borderRadius: 10, animation: 'shimmer 1.5s ease-in-out infinite' }} />
+      <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 10, animation: 'shimmer 1.5s ease-in-out infinite' }} />
     ) : children}
     <style>{`@keyframes shimmer{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
   </motion.div>
@@ -36,8 +36,8 @@ const ChartCard = ({ title, icon: Icon, color, children, loading }) => (
 const ArabicTooltip = ({ active, payload, label, unit = '' }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 14px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', fontFamily: 'Tajawal,sans-serif', direction: 'rtl' }}>
-      {label && <p style={{ fontSize: 12, color: '#64748B', margin: '0 0 6px' }}>{label}</p>}
+    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', fontFamily: 'Tajawal,sans-serif', direction: 'rtl' }}>
+      {label && <p style={{ fontSize: 12, color: 'var(--text2)', margin: '0 0 6px' }}>{label}</p>}
       {payload.map((p, i) => (
         <p key={i} style={{ fontSize: 13, fontWeight: 700, color: p.color, margin: '2px 0' }}>
           {p.name}: {typeof p.value === 'number' ? p.value.toLocaleString('ar') : p.value} {unit}
@@ -74,8 +74,8 @@ const AnalyticsCharts = ({ role = 'admin' }) => {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-            <XAxis dataKey="month" tick={{ fontSize: 11, fontFamily: 'Tajawal,sans-serif', fill: '#64748B' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11, fontFamily: 'Tajawal,sans-serif', fill: '#64748B' }} axisLine={false} tickLine={false} width={45} />
+            <XAxis dataKey="month" tick={{ fontSize: 11, fontFamily: 'Tajawal,sans-serif', fill: 'var(--text2)' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 11, fontFamily: 'Tajawal,sans-serif', fill: 'var(--text2)' }} axisLine={false} tickLine={false} width={45} />
             <Tooltip content={<ArabicTooltip unit="ر.ع" />} />
             <Area type="monotone" dataKey="revenue" name="الإيرادات" stroke="#4338CA" strokeWidth={2.5} fill="url(#revenueGrad)" dot={{ fill: '#4338CA', r: 4 }} activeDot={{ r: 6 }} />
           </AreaChart>
@@ -87,8 +87,8 @@ const AnalyticsCharts = ({ role = 'admin' }) => {
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={data?.daily_orders || []} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-            <XAxis dataKey="day" tick={{ fontSize: 10, fontFamily: 'Tajawal,sans-serif', fill: '#64748B' }} axisLine={false} tickLine={false} interval={2} />
-            <YAxis allowDecimals={false} tick={{ fontSize: 11, fontFamily: 'Tajawal,sans-serif', fill: '#64748B' }} axisLine={false} tickLine={false} width={30} />
+            <XAxis dataKey="day" tick={{ fontSize: 10, fontFamily: 'Tajawal,sans-serif', fill: 'var(--text2)' }} axisLine={false} tickLine={false} interval={2} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 11, fontFamily: 'Tajawal,sans-serif', fill: 'var(--text2)' }} axisLine={false} tickLine={false} width={30} />
             <Tooltip content={<ArabicTooltip unit="طلب" />} />
             <Line type="monotone" dataKey="orders" name="الطلبات" stroke="#10B981" strokeWidth={2.5} dot={{ fill: '#10B981', r: 3 }} activeDot={{ r: 6 }} />
           </LineChart>
@@ -101,8 +101,8 @@ const AnalyticsCharts = ({ role = 'admin' }) => {
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={data?.top_categories || []} margin={{ top: 5, right: 5, bottom: 30, left: 0 }} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 10, fontFamily: 'Tajawal,sans-serif', fill: '#64748B' }} axisLine={false} tickLine={false} />
-              <YAxis dataKey="category" type="category" tick={{ fontSize: 11, fontFamily: 'Tajawal,sans-serif', fill: '#64748B' }} axisLine={false} tickLine={false} width={90} />
+              <XAxis type="number" tick={{ fontSize: 10, fontFamily: 'Tajawal,sans-serif', fill: 'var(--text2)' }} axisLine={false} tickLine={false} />
+              <YAxis dataKey="category" type="category" tick={{ fontSize: 11, fontFamily: 'Tajawal,sans-serif', fill: 'var(--text2)' }} axisLine={false} tickLine={false} width={90} />
               <Tooltip content={<ArabicTooltip unit="ر.ع" />} />
               <Bar dataKey="revenue" name="الإيرادات" radius={[0, 6, 6, 0]} maxBarSize={22}>
                 {data?.top_categories?.map((_, i) => (
@@ -112,7 +112,7 @@ const AnalyticsCharts = ({ role = 'admin' }) => {
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8', fontSize: 13 }}>
+          <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>
             لا توجد بيانات كافية بعد
           </div>
         )}
@@ -144,14 +144,14 @@ const AnalyticsCharts = ({ role = 'admin' }) => {
                 {data.status_distribution.map((s, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                     <div style={{ width: 10, height: 10, borderRadius: '50%', background: s.color || COLORS[i % COLORS.length], flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, color: '#475569', flex: 1 }}>{s.name}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#0F172A' }}>{s.value}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text2)', flex: 1 }}>{s.name}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{s.value}</span>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8', fontSize: 13 }}>
+            <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>
               لا توجد بيانات بعد
             </div>
           )}
@@ -163,8 +163,8 @@ const AnalyticsCharts = ({ role = 'admin' }) => {
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={data?.monthly_revenue || []} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-            <XAxis dataKey="month" tick={{ fontSize: 11, fontFamily: 'Tajawal,sans-serif', fill: '#64748B' }} axisLine={false} tickLine={false} />
-            <YAxis allowDecimals={false} tick={{ fontSize: 11, fontFamily: 'Tajawal,sans-serif', fill: '#64748B' }} axisLine={false} tickLine={false} width={30} />
+            <XAxis dataKey="month" tick={{ fontSize: 11, fontFamily: 'Tajawal,sans-serif', fill: 'var(--text2)' }} axisLine={false} tickLine={false} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 11, fontFamily: 'Tajawal,sans-serif', fill: 'var(--text2)' }} axisLine={false} tickLine={false} width={30} />
             <Tooltip content={<ArabicTooltip unit="طلب" />} />
             <Bar dataKey="orders" name="الطلبات" fill="#F59E0B" radius={[6, 6, 0, 0]} maxBarSize={36} />
           </BarChart>

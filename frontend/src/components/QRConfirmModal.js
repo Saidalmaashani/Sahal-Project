@@ -136,7 +136,7 @@ const QRConfirmModal = ({ order, onClose, onConfirmed }) => {
                 </div>
 
                 {/* رمز QR */}
-                <div style={{ display: 'inline-block', background: '#fff', padding: 16, borderRadius: 16, border: '2px solid #E0E7FF', boxShadow: '0 4px 20px rgba(67,56,202,0.15)', marginBottom: 16 }}>
+                <div style={{ display: 'inline-block', background: 'var(--card)', padding: 16, borderRadius: 16, border: '2px solid #E0E7FF', boxShadow: '0 4px 20px rgba(67,56,202,0.15)', marginBottom: 16 }}>
                   <QRCodeSVG
                     value={qrData.confirm_url}
                     size={200}

@@ -87,7 +87,7 @@ const MapPicker = ({ position, onChange, iconType = 'home', height = '320px' }) 
     : [23.5859, 58.4059]; // مسقط، عُمان
 
   return (
-    <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E2E8F0' }}>
+    <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
       <MapContainer
         center={defaultCenter}
         zoom={position ? 15 : 12}

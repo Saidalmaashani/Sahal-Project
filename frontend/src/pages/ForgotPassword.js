@@ -27,7 +27,7 @@ const ForgotPassword = () => {
 
   return (
     <div style={{
-      minHeight: '100svh', background: '#F8F9FA',
+      minHeight: '100svh', background: 'var(--bg2)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '24px', fontFamily: 'Tajawal,Cairo,sans-serif', direction: 'rtl',
     }}>
@@ -37,13 +37,13 @@ const ForgotPassword = () => {
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <img src="/logo.png" alt="سهل"
             style={{ height: '70px', width: 'auto', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />
-          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', margin: 0 }}>نسيت كلمة المرور؟</h1>
-          <p style={{ fontSize: '14px', color: '#475569', marginTop: '6px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text)', margin: 0 }}>نسيت كلمة المرور؟</h1>
+          <p style={{ fontSize: '14px', color: 'var(--text2)', marginTop: '6px' }}>
             أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين
           </p>
         </div>
 
-        <div style={{ background: '#fff', borderRadius: '16px', padding: '28px', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', border: '1px solid #E2E8F0' }}>
+        <div style={{ background: 'var(--card)', borderRadius: '16px', padding: '28px', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', border: '1px solid var(--border)' }}>
           {!sent ? (
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
@@ -58,13 +58,13 @@ const ForgotPassword = () => {
                   required
                   dir="ltr"
                   style={{
-                    width: '100%', padding: '12px 14px', border: '1.5px solid #E2E8F0',
-                    borderRadius: '10px', fontSize: '15px', background: '#F8FAFC',
+                    width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)',
+                    borderRadius: '10px', fontSize: '15px', background: 'var(--bg2)',
                     fontFamily: 'Tajawal,sans-serif', outline: 'none', boxSizing: 'border-box',
                     transition: 'border-color 0.2s',
                   }}
                   onFocus={e => e.target.style.borderColor = '#4338CA'}
-                  onBlur={e => e.target.style.borderColor = '#E2E8F0'}
+                  onBlur={e => e.target.style.borderColor = 'var(--border)'}
                 />
               </div>
 
@@ -82,8 +82,8 @@ const ForgotPassword = () => {
           ) : (
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '52px', marginBottom: '12px' }}>📧</div>
-              <h3 style={{ fontWeight: 700, fontSize: '18px', color: '#0F172A', marginBottom: '8px' }}>تم الإرسال!</h3>
-              <p style={{ fontSize: '14px', color: '#475569', lineHeight: 1.6, marginBottom: '16px' }}>
+              <h3 style={{ fontWeight: 700, fontSize: '18px', color: 'var(--text)', marginBottom: '8px' }}>تم الإرسال!</h3>
+              <p style={{ fontSize: '14px', color: 'var(--text2)', lineHeight: 1.6, marginBottom: '16px' }}>
                 إذا كان البريد مسجلاً ستصلك رسالة خلال دقائق.<br />
                 تحقق من مجلد الرسائل غير المرغوب فيها (Spam).
               </p>
@@ -110,7 +110,7 @@ const ForgotPassword = () => {
             </div>
           )}
 
-          <div style={{ marginTop: '20px', textAlign: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
+          <div style={{ marginTop: '20px', textAlign: 'center', borderTop: '1px solid var(--border2)', paddingTop: '16px' }}>
             <button onClick={() => navigate('/login')} style={{
               background: 'none', border: 'none', color: '#4338CA',
               fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Tajawal,sans-serif',

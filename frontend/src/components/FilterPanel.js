@@ -54,9 +54,9 @@ const FilterPanel = ({ filters, onChange, activeCount }) => {
           style={{
             display: 'flex', alignItems: 'center', gap: '6px',
             padding: '8px 14px', borderRadius: '10px', border: '1.5px solid',
-            borderColor: open || activeCount > 0 ? '#4338CA' : '#E2E8F0',
+            borderColor: open || activeCount > 0 ? '#4338CA' : 'var(--border)',
             background: open || activeCount > 0 ? '#EEF2FF' : '#fff',
-            color: open || activeCount > 0 ? '#4338CA' : '#475569',
+            color: open || activeCount > 0 ? '#4338CA' : 'var(--text2)',
             fontSize: '13px', fontWeight: 600, cursor: 'pointer',
             transition: 'all 0.2s',
           }}
@@ -75,9 +75,9 @@ const FilterPanel = ({ filters, onChange, activeCount }) => {
           value={sortBy || 'newest'}
           onChange={e => set('sortBy', e.target.value)}
           style={{
-            padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #E2E8F0',
-            background: '#fff', fontSize: '13px', fontFamily: 'Tajawal,sans-serif',
-            color: '#475569', cursor: 'pointer', outline: 'none',
+            padding: '8px 12px', borderRadius: '10px', border: '1.5px solid var(--border)',
+            background: 'var(--card)', fontSize: '13px', fontFamily: 'Tajawal,sans-serif',
+            color: 'var(--text2)', cursor: 'pointer', outline: 'none',
           }}
         >
           {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -116,13 +116,13 @@ const FilterPanel = ({ filters, onChange, activeCount }) => {
             style={{ overflow: 'hidden' }}
           >
             <div style={{
-              background: '#fff', border: '1px solid #E2E8F0', borderRadius: '14px',
+              background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '14px',
               padding: '18px', marginTop: '10px',
               display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '18px',
             }}>
               {/* نطاق السعر */}
               <div>
-                <p style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <ArrowUpDown style={{ width: 13, height: 13, color: '#4338CA' }} />
                   نطاق السعر (ر.ع)
                 </p>
@@ -130,24 +130,24 @@ const FilterPanel = ({ filters, onChange, activeCount }) => {
                   <input
                     type="number" min="0" placeholder="من"
                     value={minPrice} onChange={e => set('minPrice', e.target.value)}
-                    style={{ width: '80px', padding: '7px 10px', border: '1.5px solid #E2E8F0', borderRadius: '8px', fontSize: '13px', fontFamily: 'Tajawal,sans-serif', outline: 'none' }}
+                    style={{ width: '80px', padding: '7px 10px', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '13px', fontFamily: 'Tajawal,sans-serif', outline: 'none' }}
                     onFocus={e => e.target.style.borderColor = '#4338CA'}
-                    onBlur={e => e.target.style.borderColor = '#E2E8F0'}
+                    onBlur={e => e.target.style.borderColor = 'var(--border)'}
                   />
-                  <span style={{ color: '#94A3B8', fontSize: '12px' }}>—</span>
+                  <span style={{ color: 'var(--muted)', fontSize: '12px' }}>—</span>
                   <input
                     type="number" min="0" placeholder="حتى"
                     value={maxPrice} onChange={e => set('maxPrice', e.target.value)}
-                    style={{ width: '80px', padding: '7px 10px', border: '1.5px solid #E2E8F0', borderRadius: '8px', fontSize: '13px', fontFamily: 'Tajawal,sans-serif', outline: 'none' }}
+                    style={{ width: '80px', padding: '7px 10px', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '13px', fontFamily: 'Tajawal,sans-serif', outline: 'none' }}
                     onFocus={e => e.target.style.borderColor = '#4338CA'}
-                    onBlur={e => e.target.style.borderColor = '#E2E8F0'}
+                    onBlur={e => e.target.style.borderColor = 'var(--border)'}
                   />
                 </div>
               </div>
 
               {/* الحد الأدنى للتقييم */}
               <div>
-                <p style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <Star style={{ width: 13, height: 13, color: '#F59E0B', fill: '#F59E0B' }} />
                   أدنى تقييم
                 </p>
@@ -159,9 +159,9 @@ const FilterPanel = ({ filters, onChange, activeCount }) => {
                       onClick={() => set('minRating', r)}
                       style={{
                         padding: '5px 10px', borderRadius: '8px', border: '1.5px solid',
-                        borderColor: minRating === r ? '#F59E0B' : '#E2E8F0',
+                        borderColor: minRating === r ? '#F59E0B' : 'var(--border)',
                         background: minRating === r ? '#FEF3C7' : '#fff',
-                        color: minRating === r ? '#92400E' : '#475569',
+                        color: minRating === r ? '#92400E' : 'var(--text2)',
                         fontSize: '12px', fontFamily: 'Tajawal,sans-serif', fontWeight: 600,
                         cursor: 'pointer', transition: 'all 0.15s',
                       }}

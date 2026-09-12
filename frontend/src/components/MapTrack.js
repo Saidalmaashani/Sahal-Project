@@ -234,7 +234,7 @@ const MapTrack = ({
                 [o.delivery_lat, o.delivery_lng],
               ]}
               pathOptions={{
-                color: o.driver_id ? '#10B981' : '#94A3B8',
+                color: o.driver_id ? '#10B981' : 'var(--muted)',
                 weight: 2.5,
                 dashArray: '8,5',
                 opacity: o.driver_id ? 0.8 : 0.45,

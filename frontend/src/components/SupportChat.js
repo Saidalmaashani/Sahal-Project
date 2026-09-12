@@ -13,13 +13,13 @@ const SUGGESTIONS = [
 ];
 
 const TypingDots = () => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '12px 14px', background: '#F1F5F9', borderRadius: '4px 16px 16px 16px', width: 'fit-content' }}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '12px 14px', background: 'var(--bg3)', borderRadius: '4px 16px 16px 16px', width: 'fit-content' }}>
     {[0, 1, 2].map(i => (
       <motion.span
         key={i}
         animate={{ y: [0, -5, 0] }}
         transition={{ repeat: Infinity, duration: 0.8, delay: i * 0.15 }}
-        style={{ width: 7, height: 7, borderRadius: '50%', background: '#94A3B8', display: 'block' }}
+        style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--muted)', display: 'block' }}
       />
     ))}
   </div>
@@ -172,7 +172,7 @@ const SupportChat = () => {
                       }}>
                         {msg.text}
                       </div>
-                      <span style={{ fontSize: 10, color: '#94A3B8', marginTop: 3 }}>{fmt(msg.time)}</span>
+                      <span style={{ fontSize: 10, color: 'var(--muted)', marginTop: 3 }}>{fmt(msg.time)}</span>
                     </motion.div>
                   );
                 })}
@@ -234,13 +234,13 @@ const SupportChat = () => {
                 disabled={!input.trim() || loading}
                 style={{
                   width: 38, height: 38, borderRadius: '50%', border: 'none', flexShrink: 0,
-                  background: input.trim() && !loading ? 'linear-gradient(135deg,#4338CA,#7C3AED)' : '#E2E8F0',
+                  background: input.trim() && !loading ? 'linear-gradient(135deg,#4338CA,#7C3AED)' : 'var(--border)',
                   cursor: input.trim() && !loading ? 'pointer' : 'not-allowed',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'background 0.2s',
                 }}
               >
-                <Send style={{ width: 16, height: 16, color: input.trim() && !loading ? '#fff' : '#94A3B8' }} />
+                <Send style={{ width: 16, height: 16, color: input.trim() && !loading ? '#fff' : 'var(--muted)' }} />
               </motion.button>
             </div>
           </motion.div>

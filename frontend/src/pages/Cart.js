@@ -195,7 +195,7 @@ const Cart = () => {
                         style={{
                           flex: 1,
                           padding: '10px 6px',
-                          border: `2px solid ${locationType === id ? '#4338CA' : '#E2E8F0'}`,
+                          border: `2px solid ${locationType === id ? '#4338CA' : 'var(--border)'}`,
                           borderRadius: '10px',
                           background: locationType === id ? '#EEF2FF' : '#fff',
                           cursor: 'pointer',
@@ -206,8 +206,8 @@ const Cart = () => {
                           transition: 'all 0.2s',
                         }}
                       >
-                        <Icon style={{ width: 20, height: 20, color: locationType === id ? '#4338CA' : '#94A3B8' }} />
-                        <span style={{ fontSize: '12px', fontWeight: locationType === id ? 600 : 400, color: locationType === id ? '#4338CA' : '#475569' }}>
+                        <Icon style={{ width: 20, height: 20, color: locationType === id ? '#4338CA' : 'var(--muted)' }} />
+                        <span style={{ fontSize: '12px', fontWeight: locationType === id ? 600 : 400, color: locationType === id ? '#4338CA' : 'var(--text2)' }}>
                           {label}
                         </span>
                       </button>

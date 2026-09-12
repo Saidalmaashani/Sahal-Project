@@ -28,7 +28,7 @@ const WishlistButton = ({ productId, size = 18, className = '' }) => {
       className={className}
       style={{
         background: saved ? '#FFF1F2' : 'rgba(255,255,255,0.9)',
-        border: `1.5px solid ${saved ? '#FECDD3' : '#E2E8F0'}`,
+        border: `1.5px solid ${saved ? '#FECDD3' : 'var(--border)'}`,
         borderRadius: '50%',
         width: size + 16, height: size + 16,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -52,7 +52,7 @@ const WishlistButton = ({ productId, size = 18, className = '' }) => {
             style={{
               width: size, height: size,
               fill: saved ? '#E11D48' : 'none',
-              color: saved ? '#E11D48' : '#94A3B8',
+              color: saved ? '#E11D48' : 'var(--muted)',
               transition: 'all 0.2s',
             }}
           />

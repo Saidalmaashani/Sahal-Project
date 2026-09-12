@@ -122,8 +122,8 @@ const ProductDetail = () => {
           <div className="space-y-3">
             {/* الصورة الرئيسية */}
             <div style={{
-              background: '#fff', borderRadius: '16px', overflow: 'hidden',
-              border: '1px solid #E2E8F0', aspectRatio: '1',
+              background: 'var(--card)', borderRadius: '16px', overflow: 'hidden',
+              border: '1px solid var(--border)', aspectRatio: '1',
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
               <img
@@ -141,8 +141,8 @@ const ProductDetail = () => {
                   <button key={i} onClick={() => setSelectedImg(i)}
                     style={{
                       width: '72px', height: '72px', borderRadius: '10px', overflow: 'hidden',
-                      border: selectedImg === i ? '2px solid #4338CA' : '1px solid #E2E8F0',
-                      cursor: 'pointer', background: '#fff', padding: '4px',
+                      border: selectedImg === i ? '2px solid #4338CA' : '1px solid var(--border)',
+                      cursor: 'pointer', background: 'var(--card)', padding: '4px',
                       transition: 'border-color 0.2s'
                     }}>
                     <img src={img} alt={`صورة ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }}
@@ -161,11 +161,11 @@ const ProductDetail = () => {
               <span style={{ fontSize: '12px', fontWeight: 600, color: '#4338CA', textTransform: 'uppercase', letterSpacing: '1px' }}>
                 {product.category}
               </span>
-              <h1 style={{ fontSize: '26px', fontWeight: 700, color: '#0F172A', marginTop: '6px', lineHeight: 1.3 }}>
+              <h1 style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text)', marginTop: '6px', lineHeight: 1.3 }}>
                 {product.name}
               </h1>
               {product.brand && (
-                <p style={{ fontSize: '14px', color: '#475569', marginTop: '4px' }}>
+                <p style={{ fontSize: '14px', color: 'var(--text2)', marginTop: '4px' }}>
                   العلامة التجارية: <strong>{product.brand}</strong>
                 </p>
               )}
@@ -202,16 +202,16 @@ const ProductDetail = () => {
             {inStock && (
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                 {/* اختيار الكمية */}
-                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #E2E8F0', borderRadius: '10px', overflow: 'hidden', background: '#fff' }}>
+                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', background: 'var(--card)' }}>
                   <button onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                    style={{ padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', color: '#475569', fontSize: '18px' }}>
+                    style={{ padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text2)', fontSize: '18px' }}>
                     <Minus style={{ width: '16px', height: '16px' }} />
                   </button>
                   <span style={{ padding: '10px 18px', fontWeight: 700, fontSize: '16px', minWidth: '50px', textAlign: 'center' }}>
                     {quantity}
                   </span>
                   <button onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
-                    style={{ padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', color: '#475569', fontSize: '18px' }}>
+                    style={{ padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text2)', fontSize: '18px' }}>
                     <Plus style={{ width: '16px', height: '16px' }} />
                   </button>
                 </div>
@@ -225,8 +225,8 @@ const ProductDetail = () => {
                   {adding ? 'جارٍ الإضافة...' : 'أضف إلى السلة'}
                 </Button>
 
-                <button onClick={share} style={{ padding: '12px', border: '1px solid #E2E8F0', borderRadius: '10px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Share2 style={{ width: '18px', height: '18px', color: '#475569' }} />
+                <button onClick={share} style={{ padding: '12px', border: '1px solid var(--border)', borderRadius: '10px', background: 'var(--card)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Share2 style={{ width: '18px', height: '18px', color: 'var(--text2)' }} />
                 </button>
                 <WishlistButton productId={product.product_id} size={20} />
               </div>
@@ -234,27 +234,27 @@ const ProductDetail = () => {
 
             {/* الإجمالي */}
             {inStock && quantity > 1 && (
-              <p style={{ fontSize: '14px', color: '#475569', textAlign: 'left' }}>
+              <p style={{ fontSize: '14px', color: 'var(--text2)', textAlign: 'left' }}>
                 الإجمالي: <strong style={{ color: '#4338CA', fontSize: '16px' }}>ر.ع {(product.price * quantity).toFixed(3)}</strong>
               </p>
             )}
 
             {/* معلومات المنتج */}
-            <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
+            <div style={{ borderTop: '1px solid var(--border2)', paddingTop: '16px' }}>
               <h3 style={{ fontWeight: 700, fontSize: '16px', marginBottom: '10px' }}>تفاصيل المنتج</h3>
-              <p style={{ color: '#475569', fontSize: '14px', lineHeight: 1.8, whiteSpace: 'pre-line' }}>
+              <p style={{ color: 'var(--text2)', fontSize: '14px', lineHeight: 1.8, whiteSpace: 'pre-line' }}>
                 {product.description}
               </p>
             </div>
 
             {/* المواصفات */}
             {(product.sku || product.weight || product.brand) && (
-              <div style={{ background: '#F8FAFC', borderRadius: '12px', padding: '16px' }}>
-                <h3 style={{ fontWeight: 700, fontSize: '14px', marginBottom: '10px', color: '#0F172A' }}>المواصفات</h3>
+              <div style={{ background: 'var(--bg2)', borderRadius: '12px', padding: '16px' }}>
+                <h3 style={{ fontWeight: 700, fontSize: '14px', marginBottom: '10px', color: 'var(--text)' }}>المواصفات</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {product.brand && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                      <span style={{ color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Tag style={{ width: '12px', height: '12px' }} />العلامة التجارية
                       </span>
                       <span style={{ fontWeight: 600 }}>{product.brand}</span>
@@ -262,7 +262,7 @@ const ProductDetail = () => {
                   )}
                   {product.sku && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                      <span style={{ color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Layers style={{ width: '12px', height: '12px' }} />رمز المنتج (SKU)
                       </span>
                       <span style={{ fontWeight: 600, direction: 'ltr' }}>{product.sku}</span>
@@ -270,14 +270,14 @@ const ProductDetail = () => {
                   )}
                   {product.weight && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                      <span style={{ color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Weight style={{ width: '12px', height: '12px' }} />الوزن
                       </span>
                       <span style={{ fontWeight: 600 }}>{product.weight} كجم</span>
                     </div>
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                    <span style={{ color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <Package style={{ width: '12px', height: '12px' }} />الكمية المتاحة
                     </span>
                     <span style={{ fontWeight: 600 }}>{product.stock} قطعة</span>
@@ -288,14 +288,14 @@ const ProductDetail = () => {
 
             {/* بطاقة المتجر */}
             {store && (
-              <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'linear-gradient(135deg,#4338CA,#7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Store style={{ width: '22px', height: '22px', color: '#fff' }} />
                 </div>
                 <div>
-                  <p style={{ fontSize: '11px', color: '#94A3B8', marginBottom: '2px' }}>يُباع بواسطة</p>
-                  <p style={{ fontWeight: 700, fontSize: '15px', color: '#0F172A' }}>{store.name}</p>
-                  {store.description && <p style={{ fontSize: '12px', color: '#475569' }}>{store.description}</p>}
+                  <p style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '2px' }}>يُباع بواسطة</p>
+                  <p style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}>{store.name}</p>
+                  {store.description && <p style={{ fontSize: '12px', color: 'var(--text2)' }}>{store.description}</p>}
                 </div>
               </div>
             )}
@@ -306,8 +306,8 @@ const ProductDetail = () => {
       {/* ===== قسم التقييمات ===== */}
       <div className="container mx-auto px-4 pb-12" style={{ maxWidth: '900px' }}>
         <div style={{
-          background: '#fff', borderRadius: '20px', padding: '28px',
-          border: '1px solid #E2E8F0', boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+          background: 'var(--card)', borderRadius: '20px', padding: '28px',
+          border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
         }}>
           {/* Header القسم */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -316,9 +316,9 @@ const ProductDetail = () => {
                 <Star style={{ width: '18px', height: '18px', color: '#fff', fill: '#fff' }} />
               </div>
               <div>
-                <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', margin: 0 }}>آراء المشترين</h2>
+                <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)', margin: 0 }}>آراء المشترين</h2>
                 {product.review_count > 0 && (
-                  <p style={{ fontSize: '12px', color: '#64748B', margin: 0 }}>
+                  <p style={{ fontSize: '12px', color: 'var(--text2)', margin: 0 }}>
                     {product.review_count} تقييم · متوسط {product.average_rating?.toFixed(1)} من 5
                   </p>
                 )}
@@ -349,7 +349,7 @@ const ProductDetail = () => {
                     اكتب تقييماً
                   </motion.button>
                 ) : (
-                  <span style={{ fontSize: '12px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <MessageSquare style={{ width: 14, height: 14 }} />
                     يتاح التقييم بعد الاستلام
                   </span>

@@ -11,9 +11,9 @@ const RatingBar = ({ count, total, star }) => {
   const colors = { 5: '#10B981', 4: '#4338CA', 3: '#F59E0B', 2: '#F97316', 1: '#E11D48' };
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <span style={{ fontSize: '12px', color: '#475569', minWidth: '8px' }}>{star}</span>
+      <span style={{ fontSize: '12px', color: 'var(--text2)', minWidth: '8px' }}>{star}</span>
       <Star style={{ width: 12, height: 12, fill: '#F59E0B', color: '#F59E0B' }} />
-      <div style={{ flex: 1, height: '8px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
+      <div style={{ flex: 1, height: '8px', background: 'var(--bg3)', borderRadius: '4px', overflow: 'hidden' }}>
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
@@ -21,7 +21,7 @@ const RatingBar = ({ count, total, star }) => {
           style={{ height: '100%', background: colors[star], borderRadius: '4px' }}
         />
       </div>
-      <span style={{ fontSize: '11px', color: '#94A3B8', minWidth: '28px', textAlign: 'left' }}>{count}</span>
+      <span style={{ fontSize: '11px', color: 'var(--muted)', minWidth: '28px', textAlign: 'left' }}>{count}</span>
     </div>
   );
 };
@@ -37,8 +37,8 @@ const ReviewCard = ({ review, onDelete, canDelete }) => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       style={{
-        background: '#fff', borderRadius: '14px', padding: '16px',
-        border: '1px solid #F1F5F9', boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+        background: 'var(--card)', borderRadius: '14px', padding: '16px',
+        border: '1px solid var(--border2)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
@@ -52,8 +52,8 @@ const ReviewCard = ({ review, onDelete, canDelete }) => {
             {initials}
           </div>
           <div>
-            <p style={{ fontWeight: 700, fontSize: '14px', color: '#0F172A', margin: 0 }}>{review.user_name}</p>
-            <p style={{ fontSize: '11px', color: '#94A3B8', margin: 0 }}>
+            <p style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)', margin: 0 }}>{review.user_name}</p>
+            <p style={{ fontSize: '11px', color: 'var(--muted)', margin: 0 }}>
               {new Date(review.created_at).toLocaleDateString('ar-OM', { day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
           </div>
@@ -65,7 +65,7 @@ const ReviewCard = ({ review, onDelete, canDelete }) => {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => onDelete(review.review_id)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '6px', color: '#94A3B8' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '6px', color: 'var(--muted)' }}
             >
               <Trash2 style={{ width: 14, height: 14 }} />
             </motion.button>
@@ -115,7 +115,7 @@ const ReviewList = ({ productId, refreshTrigger }) => {
   if (loading) return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       {[1,2].map(i => (
-        <div key={i} style={{ height: '90px', background: '#F8FAFC', borderRadius: '14px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+        <div key={i} style={{ height: '90px', background: 'var(--bg2)', borderRadius: '14px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
       ))}
       <style>{`@keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:.4} }`}</style>
     </div>
@@ -138,7 +138,7 @@ const ReviewList = ({ productId, refreshTrigger }) => {
           <div style={{ display: 'flex', justifyContent: 'center', margin: '6px 0 4px' }}>
             <StarRating value={rating.average} size={18} readonly />
           </div>
-          <p style={{ fontSize: '12px', color: '#64748B', margin: 0 }}>
+          <p style={{ fontSize: '12px', color: 'var(--text2)', margin: 0 }}>
             {rating.count} {rating.count === 1 ? 'تقييم' : 'تقييم'}
           </p>
         </div>
@@ -164,9 +164,9 @@ const ReviewList = ({ productId, refreshTrigger }) => {
               onClick={() => setFilter(s)}
               style={{
                 padding: '5px 12px', borderRadius: '20px', border: '1.5px solid',
-                borderColor: filter === s ? '#4338CA' : '#E2E8F0',
+                borderColor: filter === s ? '#4338CA' : 'var(--border)',
                 background: filter === s ? '#4338CA' : '#fff',
-                color: filter === s ? '#fff' : '#475569',
+                color: filter === s ? '#fff' : 'var(--text2)',
                 fontSize: '13px', fontFamily: 'Tajawal,sans-serif', fontWeight: 600,
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
                 transition: 'all 0.15s',
@@ -182,7 +182,7 @@ const ReviewList = ({ productId, refreshTrigger }) => {
 
       {/* قائمة التقييمات */}
       {filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '32px', color: '#94A3B8' }}>
+        <div style={{ textAlign: 'center', padding: '32px', color: 'var(--muted)' }}>
           <MessageSquare style={{ width: 40, height: 40, margin: '0 auto 10px', opacity: 0.3 }} />
           <p style={{ fontSize: '14px', margin: 0 }}>
             {filter ? `لا توجد تقييمات بـ ${filter} نجوم` : 'لا توجد تقييمات بعد — كن أول من يقيّم!'}

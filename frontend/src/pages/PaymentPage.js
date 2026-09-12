@@ -120,7 +120,7 @@ const PaymentPage = () => {
                   {/* أيقونات البطاقات */}
                   <div className="flex gap-2 p-3 bg-[#F8F9FA] rounded-lg">
                     {["visa","mastercard","mada"].map(c => (
-                      <div key={c} style={{background:"#fff", border:"1px solid #E2E8F0", borderRadius:"6px", padding:"4px 10px", fontSize:"11px", fontWeight:600, color:"#475569", textTransform:"uppercase"}}>
+                      <div key={c} style={{background:"#fff", border:"1px solid var(--border)", borderRadius:"6px", padding:"4px 10px", fontSize:"11px", fontWeight:600, color:"#475569", textTransform:"uppercase"}}>
                         {c === "mada" ? "مدى" : c}
                       </div>
                     ))}
@@ -250,7 +250,7 @@ const PaymentPage = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 {items.map((item, i) => (
-                  <div key={i} style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"0.5px solid #F1F5F9"}}>
+                  <div key={i} style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"0.5px solid var(--border2)"}}>
                     <div>
                       <p style={{fontSize:"14px", fontWeight:500}}>{item.name || `منتج ${i+1}`}</p>
                       <p style={{fontSize:"12px", color:"#94A3B8"}}>الكمية: {item.quantity}</p>
@@ -261,7 +261,7 @@ const PaymentPage = () => {
                   </div>
                 ))}
 
-                <div style={{borderTop:"0.5px solid #E2E8F0", paddingTop:"12px"}}>
+                <div style={{borderTop:"0.5px solid var(--border)", paddingTop:"12px"}}>
                   <div style={{display:"flex", justifyContent:"space-between", marginBottom:"8px", fontSize:"14px", color:"#475569"}}>
                     <span>المجموع الفرعي</span>
                     <span>{total.toFixed(3)} ر.ع</span>
@@ -270,7 +270,7 @@ const PaymentPage = () => {
                     <span>رسوم التوصيل</span>
                     <span style={{color:"#10B981"}}>مجاني</span>
                   </div>
-                  <div style={{display:"flex", justifyContent:"space-between", fontSize:"18px", fontWeight:700, color:"#0F172A", borderTop:"0.5px solid #E2E8F0", paddingTop:"12px"}}>
+                  <div style={{display:"flex", justifyContent:"space-between", fontSize:"18px", fontWeight:700, color:"#0F172A", borderTop:"0.5px solid var(--border)", paddingTop:"12px"}}>
                     <span>الإجمالي</span>
                     <span style={{color:"#4338CA"}}>{total.toFixed(3)} ر.ع</span>
                   </div>

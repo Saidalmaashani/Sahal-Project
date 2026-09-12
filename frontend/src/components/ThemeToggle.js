@@ -17,8 +17,8 @@ const ThemeToggle = ({ size = 'md' }) => {
       style={{
         width: s, height: s,
         borderRadius: '50%',
-        border: `1.5px solid ${dark ? '#334155' : '#E2E8F0'}`,
-        background: dark ? '#1E293B' : '#F8FAFC',
+        border: `1.5px solid ${dark ? '#334155' : 'var(--border)'}`,
+        background: dark ? 'var(--text)' : 'var(--bg2)',
         cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         position: 'relative', overflow: 'hidden',
@@ -37,7 +37,7 @@ const ThemeToggle = ({ size = 'md' }) => {
         >
           {dark
             ? <Sun  style={{ width: iconSize, height: iconSize, color: '#FCD34D' }} />
-            : <Moon style={{ width: iconSize, height: iconSize, color: '#475569' }} />
+            : <Moon style={{ width: iconSize, height: iconSize, color: 'var(--text2)' }} />
           }
         </motion.span>
       </AnimatePresence>

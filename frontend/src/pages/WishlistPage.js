@@ -56,15 +56,15 @@ const WishlistPage = () => {
 
   if (loading) return (
     <div className="min-h-screen bg-[#F8F9FA]" style={{ direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif' }}>
-      <div style={{ background: '#fff', borderBottom: '1px solid #E2E8F0', padding: '16px 24px' }}>
-        <div style={{ width: 100, height: 24, background: '#F1F5F9', borderRadius: 8, animation: 'shimmer 1.5s ease-in-out infinite' }} />
+      <div style={{ background: 'var(--card)', borderBottom: '1px solid var(--border)', padding: '16px 24px' }}>
+        <div style={{ width: 100, height: 24, background: 'var(--bg3)', borderRadius: 8, animation: 'shimmer 1.5s ease-in-out infinite' }} />
       </div>
       <div style={{ maxWidth: 900, margin: '32px auto', padding: '0 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
         {[1,2,3,4].map(i => (
-          <div key={i} style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', border: '1px solid #E2E8F0' }}>
-            <div style={{ height: 180, background: '#F1F5F9', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+          <div key={i} style={{ background: 'var(--card)', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--border)' }}>
+            <div style={{ height: 180, background: 'var(--bg3)', animation: 'shimmer 1.5s ease-in-out infinite' }} />
             <div style={{ padding: 14 }}>
-              <div style={{ height: 14, background: '#F1F5F9', borderRadius: 6, marginBottom: 8, width: '75%', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+              <div style={{ height: 14, background: 'var(--bg3)', borderRadius: 6, marginBottom: 8, width: '75%', animation: 'shimmer 1.5s ease-in-out infinite' }} />
               <div style={{ height: 18, background: '#EEF2FF', borderRadius: 6, width: '40%', animation: 'shimmer 1.5s ease-in-out infinite' }} />
             </div>
           </div>
@@ -77,20 +77,20 @@ const WishlistPage = () => {
   return (
     <div className="min-h-screen bg-[#F8F9FA]" style={{ direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif' }}>
       {/* Header */}
-      <header style={{ background: '#fff', borderBottom: '1px solid #E2E8F0', padding: '16px 24px', position: 'sticky', top: 0, zIndex: 40 }}>
+      <header style={{ background: 'var(--card)', borderBottom: '1px solid var(--border)', padding: '16px 24px', position: 'sticky', top: 0, zIndex: 40 }}>
         <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <img src="/logo.png" alt="سهل" style={{ height: 30, width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
             <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/shop')}
-              style={{ background: 'none', border: '1px solid #E2E8F0', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#475569', fontFamily: 'Tajawal,sans-serif' }}>
+              style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text2)', fontFamily: 'Tajawal,sans-serif' }}>
               <ArrowRight style={{ width: 15, height: 15 }} />متجر
             </motion.button>
             <div>
-              <h1 style={{ fontSize: 20, fontWeight: 800, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h1 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Heart style={{ width: 20, height: 20, fill: '#E11D48', color: '#E11D48' }} />
                 قائمة المفضلة
               </h1>
-              <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>{items.length} منتج محفوظ</p>
+              <p style={{ fontSize: 13, color: 'var(--text2)', margin: 0 }}>{items.length} منتج محفوظ</p>
             </div>
           </div>
           {items.length > 0 && (
@@ -116,8 +116,8 @@ const WishlistPage = () => {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             style={{ textAlign: 'center', padding: '80px 24px' }}>
             <Heart style={{ width: 64, height: 64, color: '#FECDD3', margin: '0 auto 16px' }} />
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0F172A', marginBottom: 8 }}>قائمتك فارغة</h2>
-            <p style={{ color: '#64748B', marginBottom: 24 }}>تصفّح المنتجات وأضف ما يعجبك للمفضلة</p>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>قائمتك فارغة</h2>
+            <p style={{ color: 'var(--text2)', marginBottom: 24 }}>تصفّح المنتجات وأضف ما يعجبك للمفضلة</p>
             <motion.button whileTap={{ scale: 0.97 }} onClick={() => navigate('/shop')}
               style={{ padding: '12px 28px', background: 'linear-gradient(135deg,#4338CA,#7C3AED)', color: '#fff', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'Tajawal,sans-serif' }}>
               تصفّح المتجر
@@ -135,8 +135,8 @@ const WishlistPage = () => {
                   exit={{ opacity: 0, scale: 0.88 }}
                   transition={{ delay: idx * 0.05 }}
                   style={{
-                    background: '#fff', borderRadius: 16, overflow: 'hidden',
-                    border: '1px solid #E2E8F0', position: 'relative',
+                    background: 'var(--card)', borderRadius: 16, overflow: 'hidden',
+                    border: '1px solid var(--border)', position: 'relative',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
                     cursor: 'pointer',
                   }}
@@ -144,7 +144,7 @@ const WishlistPage = () => {
                   whileHover={{ y: -3, boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}
                 >
                   {/* صورة */}
-                  <div style={{ position: 'relative', aspectRatio: '1', overflow: 'hidden', background: '#F8FAFC' }}>
+                  <div style={{ position: 'relative', aspectRatio: '1', overflow: 'hidden', background: 'var(--bg2)' }}>
                     <img
                       src={product.images?.[0] || PLACEHOLDER}
                       alt={product.name}
@@ -167,7 +167,7 @@ const WishlistPage = () => {
 
                   {/* تفاصيل */}
                   <div style={{ padding: '12px 14px' }}>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: '#0F172A', margin: '0 0 4px', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', margin: '0 0 4px', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {product.name}
                     </p>
                     {(product.average_rating > 0) && (
@@ -185,8 +185,8 @@ const WishlistPage = () => {
                         onClick={e => { e.stopPropagation(); addToCart(product.product_id); }}
                         style={{
                           padding: '6px 12px', borderRadius: 8, border: 'none',
-                          background: product.stock > 0 ? '#4338CA' : '#E2E8F0',
-                          color: product.stock > 0 ? '#fff' : '#94A3B8',
+                          background: product.stock > 0 ? '#4338CA' : 'var(--border)',
+                          color: product.stock > 0 ? '#fff' : 'var(--muted)',
                           fontSize: 12, fontWeight: 700, cursor: product.stock > 0 ? 'pointer' : 'not-allowed',
                           fontFamily: 'Tajawal,sans-serif', display: 'flex', alignItems: 'center', gap: 4,
                         }}

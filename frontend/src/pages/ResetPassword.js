@@ -23,7 +23,7 @@ const PasswordStrength = ({ password }) => {
     <div style={{ marginTop: '6px' }}>
       <div style={{ display: 'flex', gap: '4px', marginBottom: '3px' }}>
         {[1,2,3,4].map(i => (
-          <div key={i} style={{ flex: 1, height: '4px', borderRadius: '2px', background: i <= score ? lvl.color : '#E2E8F0', transition: 'background 0.3s' }} />
+          <div key={i} style={{ flex: 1, height: '4px', borderRadius: '2px', background: i <= score ? lvl.color : 'var(--border)', transition: 'background 0.3s' }} />
         ))}
       </div>
       <p style={{ fontSize: '11px', color: lvl.color, margin: 0 }}>كلمة المرور {lvl.label}</p>
@@ -66,15 +66,15 @@ const ResetPassword = () => {
   };
 
   const inp = (extra = {}) => ({
-    width: '100%', padding: '12px 44px 12px 14px', border: '1.5px solid #E2E8F0',
-    borderRadius: '10px', fontSize: '15px', background: '#F8FAFC',
+    width: '100%', padding: '12px 44px 12px 14px', border: '1.5px solid var(--border)',
+    borderRadius: '10px', fontSize: '15px', background: 'var(--bg2)',
     fontFamily: 'Tajawal,sans-serif', outline: 'none', boxSizing: 'border-box',
     transition: 'border-color 0.2s', ...extra,
   });
 
   return (
     <div style={{
-      minHeight: '100svh', background: '#F8F9FA',
+      minHeight: '100svh', background: 'var(--bg2)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '24px', fontFamily: 'Tajawal,Cairo,sans-serif', direction: 'rtl',
     }}>
@@ -84,17 +84,17 @@ const ResetPassword = () => {
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <img src="/logo.png" alt="سهل"
             style={{ height: '70px', width: 'auto', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />
-          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text)', margin: 0 }}>
             {done ? 'تم بنجاح! ✅' : 'تعيين كلمة مرور جديدة'}
           </h1>
-          {!done && <p style={{ fontSize: '14px', color: '#475569', marginTop: '6px' }}>أدخل كلمة المرور الجديدة</p>}
+          {!done && <p style={{ fontSize: '14px', color: 'var(--text2)', marginTop: '6px' }}>أدخل كلمة المرور الجديدة</p>}
         </div>
 
-        <div style={{ background: '#fff', borderRadius: '16px', padding: '28px', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', border: '1px solid #E2E8F0' }}>
+        <div style={{ background: 'var(--card)', borderRadius: '16px', padding: '28px', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', border: '1px solid var(--border)' }}>
           {done ? (
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '52px', marginBottom: '12px' }}>🎉</div>
-              <p style={{ fontSize: '15px', color: '#475569', lineHeight: 1.6, marginBottom: '20px' }}>
+              <p style={{ fontSize: '15px', color: 'var(--text2)', lineHeight: 1.6, marginBottom: '20px' }}>
                 تم تغيير كلمة المرور بنجاح.<br />يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.
               </p>
               <button onClick={() => navigate('/login')} style={{
@@ -122,9 +122,9 @@ const ResetPassword = () => {
                     placeholder="8 أحرف على الأقل"
                     required
                     dir="ltr"
-                    style={inp({ borderColor: form.password.length >= 8 ? '#10B981' : form.password ? '#F97316' : '#E2E8F0' })}
+                    style={inp({ borderColor: form.password.length >= 8 ? '#10B981' : form.password ? '#F97316' : 'var(--border)' })}
                     onFocus={e => e.target.style.borderColor = '#4338CA'}
-                    onBlur={e => e.target.style.borderColor = form.password.length >= 8 ? '#10B981' : form.password ? '#F97316' : '#E2E8F0'}
+                    onBlur={e => e.target.style.borderColor = form.password.length >= 8 ? '#10B981' : form.password ? '#F97316' : 'var(--border)'}
                   />
                   <button type="button" onClick={() => setShow(s => ({ ...s, p: !s.p }))}
                     style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px' }}>
@@ -150,10 +150,10 @@ const ResetPassword = () => {
                     style={inp({
                       borderColor: form.confirm
                         ? (form.password === form.confirm ? '#10B981' : '#E11D48')
-                        : '#E2E8F0'
+                        : 'var(--border)'
                     })}
                     onFocus={e => e.target.style.borderColor = '#4338CA'}
-                    onBlur={e => e.target.style.borderColor = form.confirm ? (form.password === form.confirm ? '#10B981' : '#E11D48') : '#E2E8F0'}
+                    onBlur={e => e.target.style.borderColor = form.confirm ? (form.password === form.confirm ? '#10B981' : '#E11D48') : 'var(--border)'}
                   />
                   <button type="button" onClick={() => setShow(s => ({ ...s, c: !s.c }))}
                     style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px' }}>
@@ -180,7 +180,7 @@ const ResetPassword = () => {
           )}
 
           {!done && (
-            <div style={{ marginTop: '20px', textAlign: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
+            <div style={{ marginTop: '20px', textAlign: 'center', borderTop: '1px solid var(--border2)', paddingTop: '16px' }}>
               <button onClick={() => navigate('/login')} style={{
                 background: 'none', border: 'none', color: '#4338CA',
                 fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Tajawal,sans-serif',

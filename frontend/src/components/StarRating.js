@@ -60,11 +60,11 @@ const StarRating = ({ value = 0, onChange, size = 24, readonly = false }) => {
 export const StarDisplay = ({ value = 0, count, size = 14 }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
     <StarRating value={value} size={size} readonly />
-    <span style={{ fontSize: size - 2, color: '#475569', fontWeight: 600 }}>
+    <span style={{ fontSize: size - 2, color: 'var(--text2)', fontWeight: 600 }}>
       {value > 0 ? value.toFixed(1) : ''}
     </span>
     {count !== undefined && (
-      <span style={{ fontSize: size - 3, color: '#94A3B8' }}>({count})</span>
+      <span style={{ fontSize: size - 3, color: 'var(--muted)' }}>({count})</span>
     )}
   </div>
 );

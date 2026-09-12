@@ -63,7 +63,7 @@ const SearchAutocomplete = ({ value, onChange, onSearch, placeholder = 'ابحث
       <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
         <Search style={{
           position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-          width: 18, height: 18, color: '#94A3B8', pointerEvents: 'none', zIndex: 1,
+          width: 18, height: 18, color: 'var(--muted)', pointerEvents: 'none', zIndex: 1,
         }} />
         <input
           ref={inputRef}
@@ -74,19 +74,19 @@ const SearchAutocomplete = ({ value, onChange, onSearch, placeholder = 'ابحث
           placeholder={placeholder}
           style={{
             width: '100%', padding: '10px 42px 10px 40px',
-            border: '1.5px solid #E2E8F0', borderRadius: '12px',
+            border: '1.5px solid var(--border)', borderRadius: '12px',
             fontSize: '14px', fontFamily: 'Tajawal,sans-serif',
-            outline: 'none', background: '#fff', color: '#0F172A',
+            outline: 'none', background: 'var(--card)', color: 'var(--text)',
             transition: 'border-color 0.2s, box-shadow 0.2s',
           }}
           onFocus={e => { e.target.style.borderColor = '#4338CA'; e.target.style.boxShadow = '0 0 0 3px rgba(67,56,202,0.1)'; }}
-          onBlur={e => { e.target.style.borderColor = '#E2E8F0'; e.target.style.boxShadow = 'none'; }}
+          onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
         />
         {value && (
           <motion.button
             initial={{ scale: 0 }} animate={{ scale: 1 }}
             onClick={() => { onChange(''); setSuggestions([]); setOpen(false); inputRef.current?.focus(); }}
-            style={{ position: 'absolute', left: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: '2px', borderRadius: '4px', color: '#94A3B8', display: 'flex' }}
+            style={{ position: 'absolute', left: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: '2px', borderRadius: '4px', color: 'var(--muted)', display: 'flex' }}
           >
             <X style={{ width: 16, height: 16 }} />
           </motion.button>
@@ -103,13 +103,13 @@ const SearchAutocomplete = ({ value, onChange, onSearch, placeholder = 'ابحث
             transition={{ duration: 0.15 }}
             style={{
               position: 'absolute', top: 'calc(100% + 6px)', right: 0, left: 0,
-              background: '#fff', border: '1px solid #E2E8F0', borderRadius: '14px',
+              background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '14px',
               boxShadow: '0 12px 40px rgba(0,0,0,0.12)', zIndex: 200, overflow: 'hidden',
               direction: 'rtl',
             }}
           >
-            <div style={{ padding: '6px 12px', borderBottom: '1px solid #F1F5F9' }}>
-              <span style={{ fontSize: '11px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ padding: '6px 12px', borderBottom: '1px solid var(--border2)' }}>
+              <span style={{ fontSize: '11px', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <TrendingUp style={{ width: 11, height: 11 }} />
                 نتائج البحث
               </span>
@@ -134,13 +134,13 @@ const SearchAutocomplete = ({ value, onChange, onSearch, placeholder = 'ابحث
                   src={item.images?.[0] || PLACEHOLDER_IMG}
                   alt={item.name}
                   onError={e => { e.target.src = PLACEHOLDER_IMG; }}
-                  style={{ width: 38, height: 38, borderRadius: '8px', objectFit: 'cover', flexShrink: 0, border: '1px solid #F1F5F9' }}
+                  style={{ width: 38, height: 38, borderRadius: '8px', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border2)' }}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: '13px', fontWeight: 600, color: '#0F172A', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {item.name}
                   </p>
-                  <p style={{ fontSize: '11px', color: '#64748B', margin: 0 }}>{item.category}</p>
+                  <p style={{ fontSize: '11px', color: 'var(--text2)', margin: 0 }}>{item.category}</p>
                 </div>
                 <span style={{ fontSize: '13px', fontWeight: 700, color: '#4338CA', flexShrink: 0 }}>
                   {item.price?.toFixed(3)} ر.ع
@@ -148,7 +148,7 @@ const SearchAutocomplete = ({ value, onChange, onSearch, placeholder = 'ابحث
               </motion.div>
             ))}
             <div
-              style={{ padding: '10px 14px', borderTop: '1px solid #F1F5F9', cursor: 'pointer', background: '#FAFAFA' }}
+              style={{ padding: '10px 14px', borderTop: '1px solid var(--border2)', cursor: 'pointer', background: '#FAFAFA' }}
               onClick={() => { setOpen(false); onSearch?.(); }}
             >
               <span style={{ fontSize: '13px', color: '#4338CA', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>

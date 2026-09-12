@@ -42,20 +42,20 @@ const ReviewForm = ({ productId, productName, onClose, onSubmitted }) => {
         exit={{ scale: 0.9, y: 24, opacity: 0 }}
         transition={{ type: 'spring', damping: 22, stiffness: 300 }}
         style={{
-          background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '460px',
+          background: 'var(--card)', borderRadius: '20px', width: '100%', maxWidth: '460px',
           direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif',
           boxShadow: '0 24px 64px rgba(0,0,0,0.2)',
           overflow: 'hidden',
         }}
       >
         {/* Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border2)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h3 style={{ fontWeight: 800, fontSize: '18px', margin: 0, color: '#0F172A' }}>قيّم المنتج</h3>
-            <p style={{ fontSize: '13px', color: '#64748B', margin: '4px 0 0' }}>{productName}</p>
+            <h3 style={{ fontWeight: 800, fontSize: '18px', margin: 0, color: 'var(--text)' }}>قيّم المنتج</h3>
+            <p style={{ fontSize: '13px', color: 'var(--text2)', margin: '4px 0 0' }}>{productName}</p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '8px' }}>
-            <X style={{ width: 20, height: 20, color: '#94A3B8' }} />
+            <X style={{ width: 20, height: 20, color: 'var(--muted)' }} />
           </button>
         </div>
 
@@ -74,8 +74,8 @@ const ReviewForm = ({ productId, productName, onClose, onSubmitted }) => {
               >
                 <CheckCircle style={{ width: 56, height: 56, color: '#10B981', margin: '0 auto 16px' }} />
               </motion.div>
-              <p style={{ fontSize: '20px', fontWeight: 800, color: '#0F172A', margin: '0 0 8px' }}>شكراً على تقييمك!</p>
-              <p style={{ fontSize: '14px', color: '#64748B', margin: 0 }}>رأيك يساعد المتسوقين الآخرين</p>
+              <p style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text)', margin: '0 0 8px' }}>شكراً على تقييمك!</p>
+              <p style={{ fontSize: '14px', color: 'var(--text2)', margin: 0 }}>رأيك يساعد المتسوقين الآخرين</p>
             </motion.div>
           ) : (
             <motion.div key="form" style={{ padding: '24px' }}>
@@ -105,7 +105,7 @@ const ReviewForm = ({ productId, productName, onClose, onSubmitted }) => {
               {/* التعليق */}
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ fontSize: '13px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '8px' }}>
-                  تعليقك <span style={{ color: '#94A3B8', fontWeight: 400 }}>(اشرح تجربتك)</span>
+                  تعليقك <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(اشرح تجربتك)</span>
                 </label>
                 <textarea
                   value={comment}
@@ -113,16 +113,16 @@ const ReviewForm = ({ productId, productName, onClose, onSubmitted }) => {
                   placeholder="كيف كان المنتج؟ هل يطابق الوصف؟ هل توصي به؟..."
                   rows={4}
                   style={{
-                    width: '100%', padding: '12px', border: '1.5px solid #E2E8F0',
+                    width: '100%', padding: '12px', border: '1.5px solid var(--border)',
                     borderRadius: '12px', fontSize: '14px', fontFamily: 'Tajawal,sans-serif',
                     resize: 'vertical', outline: 'none', lineHeight: 1.6,
                     transition: 'border-color 0.2s', boxSizing: 'border-box',
-                    color: '#0F172A',
+                    color: 'var(--text)',
                   }}
                   onFocus={e => e.target.style.borderColor = '#4338CA'}
-                  onBlur={e => e.target.style.borderColor = '#E2E8F0'}
+                  onBlur={e => e.target.style.borderColor = 'var(--border)'}
                 />
-                <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px', textAlign: 'left' }}>
+                <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px', textAlign: 'left' }}>
                   {comment.length}/500
                 </p>
               </div>
@@ -132,8 +132,8 @@ const ReviewForm = ({ productId, productName, onClose, onSubmitted }) => {
                 <button
                   onClick={onClose}
                   style={{
-                    flex: 1, padding: '12px', borderRadius: '12px', border: '1.5px solid #E2E8F0',
-                    background: '#fff', color: '#475569', fontFamily: 'Tajawal,sans-serif',
+                    flex: 1, padding: '12px', borderRadius: '12px', border: '1.5px solid var(--border)',
+                    background: 'var(--card)', color: 'var(--text2)', fontFamily: 'Tajawal,sans-serif',
                     fontSize: '14px', fontWeight: 600, cursor: 'pointer',
                   }}
                 >
@@ -145,8 +145,8 @@ const ReviewForm = ({ productId, productName, onClose, onSubmitted }) => {
                   disabled={submitting || !rating}
                   style={{
                     flex: 2, padding: '12px', borderRadius: '12px', border: 'none',
-                    background: rating ? 'linear-gradient(135deg, #4338CA, #7C3AED)' : '#E2E8F0',
-                    color: rating ? '#fff' : '#94A3B8',
+                    background: rating ? 'linear-gradient(135deg, #4338CA, #7C3AED)' : 'var(--border)',
+                    color: rating ? '#fff' : 'var(--muted)',
                     fontFamily: 'Tajawal,sans-serif', fontSize: '14px', fontWeight: 700,
                     cursor: rating ? 'pointer' : 'not-allowed',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',

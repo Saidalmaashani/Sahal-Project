@@ -80,14 +80,14 @@ const DeliveryConfirmPage = () => {
             style={{ textAlign: 'center' }}>
             <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
               style={{ width: 52, height: 52, borderRadius: '50%', border: '4px solid #E0E7FF', borderTopColor: '#4338CA', margin: '0 auto 16px' }} />
-            <p style={{ color: '#475569', fontSize: 15 }}>جارٍ التحقق من الرمز...</p>
+            <p style={{ color: 'var(--text2)', fontSize: 15 }}>جارٍ التحقق من الرمز...</p>
           </motion.div>
         )}
 
         {/* جاهز للتأكيد */}
         {status === 'ready' && info && (
           <motion.div key="ready" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.12)', overflow: 'hidden' }}>
+            style={{ background: 'var(--card)', borderRadius: 24, width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.12)', overflow: 'hidden' }}>
 
             {/* Header */}
             <div style={{ background: 'linear-gradient(135deg,#4338CA,#7C3AED)', padding: '24px 20px', textAlign: 'center' }}>
@@ -113,30 +113,30 @@ const DeliveryConfirmPage = () => {
               )}
 
               {/* ملخص الطلب */}
-              <div style={{ background: '#F8FAFC', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: '#0F172A', margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Package style={{ width: 15, height: 15, color: '#4338CA' }} />
                   محتويات الطلب ({totalItems} قطعة)
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {info.items?.slice(0, 4).map((item, i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
-                      <span style={{ color: '#475569' }}>• {item.name || `منتج ${i + 1}`} × {item.quantity}</span>
-                      <span style={{ fontWeight: 600, color: '#0F172A' }}>{((item.price || 0) * item.quantity).toFixed(3)} ر.ع</span>
+                      <span style={{ color: 'var(--text2)' }}>• {item.name || `منتج ${i + 1}`} × {item.quantity}</span>
+                      <span style={{ fontWeight: 600, color: 'var(--text)' }}>{((item.price || 0) * item.quantity).toFixed(3)} ر.ع</span>
                     </div>
                   ))}
                   {info.items?.length > 4 && (
-                    <p style={{ fontSize: 12, color: '#94A3B8', margin: 0 }}>+ {info.items.length - 4} منتجات أخرى</p>
+                    <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>+ {info.items.length - 4} منتجات أخرى</p>
                   )}
                 </div>
-                <div style={{ borderTop: '1px solid #E2E8F0', marginTop: 10, paddingTop: 10, display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontWeight: 700, color: '#0F172A' }}>الإجمالي</span>
+                <div style={{ borderTop: '1px solid var(--border)', marginTop: 10, paddingTop: 10, display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontWeight: 700, color: 'var(--text)' }}>الإجمالي</span>
                   <span style={{ fontWeight: 900, fontSize: 18, color: '#4338CA' }}>{info.total_amount?.toFixed(3)} ر.ع</span>
                 </div>
               </div>
 
               {/* العنوان */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 20, fontSize: 13, color: '#475569' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 20, fontSize: 13, color: 'var(--text2)' }}>
                 <MapPin style={{ width: 15, height: 15, color: '#F97316', marginTop: 2, flexShrink: 0 }} />
                 <span>{info.delivery_address}</span>
               </div>
@@ -176,7 +176,7 @@ const DeliveryConfirmPage = () => {
                 disabled={submitting}
                 style={{
                   width: '100%', padding: '14px', borderRadius: 14, border: 'none',
-                  background: submitting ? '#94A3B8' : 'linear-gradient(135deg,#10B981,#059669)',
+                  background: submitting ? 'var(--muted)' : 'linear-gradient(135deg,#10B981,#059669)',
                   color: '#fff', fontFamily: 'Tajawal,sans-serif', fontSize: 16, fontWeight: 900,
                   cursor: submitting ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
@@ -193,7 +193,7 @@ const DeliveryConfirmPage = () => {
               </motion.button>
 
               {!user && (
-                <p style={{ textAlign: 'center', fontSize: 12, color: '#94A3B8', marginTop: 10 }}>
+                <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--muted)', marginTop: 10 }}>
                   يجب تسجيل الدخول بحسابك لتأكيد الاستلام
                 </p>
               )}
@@ -204,14 +204,14 @@ const DeliveryConfirmPage = () => {
         {/* تم التأكيد */}
         {status === 'confirmed' && (
           <motion.div key="confirmed" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-            style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.12)', padding: '48px 24px', textAlign: 'center' }}>
+            style={{ background: 'var(--card)', borderRadius: 24, width: '100%', maxWidth: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.12)', padding: '48px 24px', textAlign: 'center' }}>
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 15 }}>
               <div style={{ width: 80, height: 80, borderRadius: '50%', background: '#DCFCE7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
                 <CheckCircle style={{ width: 44, height: 44, color: '#10B981' }} />
               </div>
             </motion.div>
-            <h2 style={{ fontSize: 24, fontWeight: 900, color: '#0F172A', margin: '0 0 8px' }}>تم الاستلام! 🎉</h2>
-            <p style={{ fontSize: 15, color: '#475569', margin: '0 0 24px' }}>شكراً لتأكيدك. نتمنى أن تكون راضياً عن طلبك</p>
+            <h2 style={{ fontSize: 24, fontWeight: 900, color: 'var(--text)', margin: '0 0 8px' }}>تم الاستلام! 🎉</h2>
+            <p style={{ fontSize: 15, color: 'var(--text2)', margin: '0 0 24px' }}>شكراً لتأكيدك. نتمنى أن تكون راضياً عن طلبك</p>
             <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/my-orders')}
               style={{ padding: '12px 28px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#4338CA,#7C3AED)', color: '#fff', fontFamily: 'Tajawal,sans-serif', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
               عرض طلباتي
@@ -222,20 +222,20 @@ const DeliveryConfirmPage = () => {
         {/* منتهي الصلاحية */}
         {status === 'expired' && (
           <motion.div key="expired" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 360, padding: '48px 24px', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.1)' }}>
+            style={{ background: 'var(--card)', borderRadius: 24, width: '100%', maxWidth: 360, padding: '48px 24px', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.1)' }}>
             <Clock style={{ width: 56, height: 56, color: '#F59E0B', margin: '0 auto 16px' }} />
-            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0F172A', margin: '0 0 8px' }}>انتهت صلاحية الرمز</h2>
-            <p style={{ color: '#475569', fontSize: 14, margin: '0 0 20px' }}>اطلب من المندوب توليد رمز جديد</p>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', margin: '0 0 8px' }}>انتهت صلاحية الرمز</h2>
+            <p style={{ color: 'var(--text2)', fontSize: 14, margin: '0 0 20px' }}>اطلب من المندوب توليد رمز جديد</p>
           </motion.div>
         )}
 
         {/* خطأ */}
         {status === 'error' && (
           <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 360, padding: '48px 24px', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.1)' }}>
+            style={{ background: 'var(--card)', borderRadius: 24, width: '100%', maxWidth: 360, padding: '48px 24px', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.1)' }}>
             <AlertCircle style={{ width: 56, height: 56, color: '#E11D48', margin: '0 auto 16px' }} />
-            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0F172A', margin: '0 0 8px' }}>رمز غير صالح</h2>
-            <p style={{ color: '#475569', fontSize: 14, margin: 0 }}>هذا الرمز غير موجود أو تم استخدامه مسبقاً</p>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', margin: '0 0 8px' }}>رمز غير صالح</h2>
+            <p style={{ color: 'var(--text2)', fontSize: 14, margin: 0 }}>هذا الرمز غير موجود أو تم استخدامه مسبقاً</p>
           </motion.div>
         )}
 

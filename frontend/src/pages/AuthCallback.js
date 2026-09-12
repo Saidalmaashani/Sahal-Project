@@ -46,7 +46,7 @@ const AuthCallback = () => {
       <img src="/logo.png" alt="سهل" style={{ height: 72, width: 'auto', objectFit: 'contain', marginBottom: 20 }} />
       <div style={{ textAlign: 'center' }}>
         <div style={{ width: '48px', height: '48px', border: '4px solid #4338CA', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto' }}></div>
-        <p style={{ marginTop: '1rem', color: '#475569', fontFamily: 'Tajawal,sans-serif' }}>جارٍ تسجيل الدخول...</p>
+        <p style={{ marginTop: '1rem', color: 'var(--text2)', fontFamily: 'Tajawal,sans-serif' }}>جارٍ تسجيل الدخول...</p>
       </div>
     </div>
   );

@@ -23,6 +23,25 @@ html.dark {
   --border:   #334155;
   --border2:  #1E293B;
   --input-bg: #1E293B;
+
+  /* Tailwind / shadcn tokens — النسخ الداكن */
+  --background:          222 47% 11%;   /* #0F172A */
+  --foreground:          210 40% 98%;   /* slate-50 */
+  --card-foreground:     210 40% 98%;
+  --popover:             215 28% 20%;
+  --popover-foreground:  210 40% 98%;
+  --primary:             249 82% 64%;   /* indigo-400 أفتح للتباين */
+  --primary-hover:       249 76% 54%;
+  --primary-foreground:  0 0% 100%;
+  --secondary:           215 28% 22%;   /* slate-700 */
+  --secondary-foreground:210 40% 96%;
+  --muted-foreground:    215 20% 68%;
+  --accent:              24 93% 50%;
+  --accent-foreground:   0 0% 100%;
+  --destructive:         346 77% 62%;
+  --destructive-foreground: 0 0% 100%;
+  --input:               215 28% 20%;
+  --ring:                249 76% 58%;
 }
 
 /* ===== Dark mode: body & basic elements ===== */
@@ -65,6 +84,16 @@ html.dark select {
   background-color: var(--input-bg) !important;
   color: var(--text) !important;
   border-color: var(--border) !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: var(--muted) !important;
+}
+
+/* hero في الدارك — خلفية داكنة بدل الفاتحة */
+html.dark .hero-section {
+  background: linear-gradient(135deg, rgba(67, 56, 202, 0.18) 0%, rgba(249, 115, 22, 0.12) 100%);
 }
 
 /* shadcn Dialog */

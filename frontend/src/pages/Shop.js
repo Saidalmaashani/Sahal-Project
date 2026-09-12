@@ -19,11 +19,11 @@ import { StarDisplay } from '../components/StarRating';
 import { useT } from '../contexts/ThemeContext';
 
 const ProductSkeleton = () => (
-  <div style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E2E8F0' }}>
+  <div style={{ background: 'var(--card)', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border)' }}>
     <div style={{ height: '200px', background: 'linear-gradient(90deg, #F1F5F9 25%, #E8EDF5 50%, #F1F5F9 75%)', backgroundSize: '200% 100%', animation: 'shimmerSlide 1.5s ease-in-out infinite' }} />
     <div style={{ padding: '14px' }}>
-      <div style={{ height: '16px', background: '#F1F5F9', borderRadius: '6px', marginBottom: '8px', width: '80%', animation: 'shimmer 1.5s ease-in-out infinite' }} />
-      <div style={{ height: '12px', background: '#F1F5F9', borderRadius: '6px', marginBottom: '12px', width: '60%', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+      <div style={{ height: '16px', background: 'var(--bg3)', borderRadius: '6px', marginBottom: '8px', width: '80%', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+      <div style={{ height: '12px', background: 'var(--bg3)', borderRadius: '6px', marginBottom: '12px', width: '60%', animation: 'shimmer 1.5s ease-in-out infinite' }} />
       <div style={{ height: '20px', background: '#EEF2FF', borderRadius: '6px', width: '40%', animation: 'shimmer 1.5s ease-in-out infinite' }} />
     </div>
     <style>{`
@@ -132,8 +132,8 @@ const StoreCard = ({ store, products, onAddToCart, navigate }) => {
 
   return (
     <div style={{
-      background: '#fff',
-      border: '1px solid #E2E8F0',
+      background: 'var(--card)',
+      border: '1px solid var(--border)',
       borderRadius: '16px',
       padding: '20px',
       marginBottom: '8px',
@@ -143,7 +143,7 @@ const StoreCard = ({ store, products, onAddToCart, navigate }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {store.logo ? (
             <img src={store.logo} alt={store.name}
-              style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', border: '1px solid #E2E8F0', flexShrink: 0 }}
+              style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }}
               onError={e => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'flex'); }} />
           ) : (
             <div style={{
@@ -155,9 +155,9 @@ const StoreCard = ({ store, products, onAddToCart, navigate }) => {
             </div>
           )}
           <div>
-            <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A' }}>{store.name}</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>{store.name}</h3>
             {store.description && (
-              <p style={{ fontSize: '13px', color: '#475569' }}>{store.description}</p>
+              <p style={{ fontSize: '13px', color: 'var(--text2)' }}>{store.description}</p>
             )}
           </div>
         </div>
@@ -189,7 +189,7 @@ const StoreCard = ({ store, products, onAddToCart, navigate }) => {
           ))}
         </div>
       ) : (
-        <p style={{ textAlign: 'center', color: '#94A3B8', fontSize: '14px', padding: '20px 0' }}>
+        <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '14px', padding: '20px 0' }}>
           لا توجد منتجات في هذا المتجر بعد
         </p>
       )}
@@ -334,7 +334,7 @@ const Shop = () => {
                 <motion.button
                   whileTap={{ scale: 0.93 }}
                   onClick={() => navigate('/wishlist')}
-                  style={{ padding: '8px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#fff', cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ padding: '8px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--card)', cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
                   <Heart style={{ width: 20, height: 20, color: '#E11D48' }} />
                 </motion.button>
@@ -344,12 +344,12 @@ const Shop = () => {
                 <div className="relative sm:hidden" ref={menuRef}>
                   <button
                     onClick={() => setMenuOpen(!menuOpen)}
-                    style={{ padding: '8px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#fff', cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ padding: '8px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--card)', cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     {menuOpen ? <XIcon style={{ width: 20, height: 20 }} /> : <Menu style={{ width: 20, height: 20 }} />}
                   </button>
                   {menuOpen && (
-                    <div style={{ position: 'absolute', top: '110%', left: 0, background: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '200px', zIndex: 100, overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: '110%', left: 0, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '200px', zIndex: 100, overflow: 'hidden' }}>
                       {[
                         { icon: Package, label: 'طلباتي',    path: '/my-orders' },
                         { icon: Heart,   label: 'مفضلتي',    path: '/wishlist' },
@@ -358,7 +358,7 @@ const Shop = () => {
                         ...(user.role !== 'shopper' ? [{ icon: LayoutDashboard, label: 'لوحة التحكم', path: getDashboardPath() }] : []),
                       ].map(({ icon: Icon, label, path }) => (
                         <button key={path} onClick={() => { navigate(path); setMenuOpen(false); }}
-                          style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '14px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '15px', fontFamily: 'Tajawal,sans-serif', borderBottom: '1px solid #F1F5F9', direction: 'rtl' }}>
+                          style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '14px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '15px', fontFamily: 'Tajawal,sans-serif', borderBottom: '1px solid var(--border2)', direction: 'rtl' }}>
                           <Icon style={{ width: 18, height: 18, color: '#4338CA' }} />
                           {label}
                         </button>
@@ -397,7 +397,7 @@ const Shop = () => {
             <select
               value={category}
               onChange={e => { setCategory(e.target.value); setActiveView('all'); }}
-              style={{ padding: '10px 14px', borderRadius: '12px', border: '1.5px solid #E2E8F0', background: '#fff', fontSize: '14px', fontFamily: 'Tajawal,sans-serif', color: '#475569', cursor: 'pointer', outline: 'none' }}
+              style={{ padding: '10px 14px', borderRadius: '12px', border: '1.5px solid var(--border)', background: 'var(--card)', fontSize: '14px', fontFamily: 'Tajawal,sans-serif', color: 'var(--text2)', cursor: 'pointer', outline: 'none' }}
             >
               {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
             </select>
@@ -425,7 +425,7 @@ const Shop = () => {
                   display: 'flex', alignItems: 'center', gap: '6px',
                   padding: '14px 20px', border: 'none', background: 'none', cursor: 'pointer',
                   fontSize: '14px', fontFamily: 'Tajawal,sans-serif', fontWeight: activeView === key ? 700 : 400,
-                  color: activeView === key ? '#4338CA' : '#475569',
+                  color: activeView === key ? '#4338CA' : 'var(--text2)',
                   borderBottom: activeView === key ? '2px solid #4338CA' : '2px solid transparent',
                   transition: 'all 0.15s',
                 }}

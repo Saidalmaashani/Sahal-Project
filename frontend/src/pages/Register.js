@@ -81,8 +81,8 @@ const Register = () => {
 
   const inp = (extra = {}) => ({
     width: '100%', padding: '13px 14px',
-    border: '1.5px solid #E2E8F0', borderRadius: '12px',
-    fontSize: '16px', background: '#F8FAFC', color: '#0F172A',
+    border: '1.5px solid var(--border)', borderRadius: '12px',
+    fontSize: '16px', background: 'var(--bg2)', color: 'var(--text)',
     fontFamily: 'Tajawal,sans-serif', outline: 'none',
     boxSizing: 'border-box', transition: 'border-color 0.2s, box-shadow 0.2s',
     ...extra,
@@ -90,7 +90,7 @@ const Register = () => {
 
   return (
     <div style={{
-      minHeight: '100svh', background: '#F8F9FA',
+      minHeight: '100svh', background: 'var(--bg2)',
       fontFamily: 'Tajawal,Cairo,sans-serif', direction: 'rtl',
       display: 'flex', alignItems: 'stretch',
       paddingTop: 'env(safe-area-inset-top)',
@@ -213,14 +213,14 @@ const Register = () => {
         flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
         padding: '32px 24px',
-        background: '#fff',
+        background: 'var(--card)',
       }}>
         <div style={{ width: '100%', maxWidth: '420px' }}>
 
           {/* Header الموبايل فقط */}
           <div className="register-mobile-header" style={{ display: 'none', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
             <button onClick={() => navigate('/')}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#475569', fontSize: '14px', padding: 0 }}>
+              style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text2)', fontSize: '14px', padding: 0 }}>
               ← رجوع
             </button>
 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -232,16 +232,16 @@ const Register = () => {
 
           {/* شريط التقدم الخطي — موبايل */}
           <div className="register-mobile-progress" style={{ display: 'none', marginBottom: '20px' }}>
-            <div style={{ height: '4px', background: '#F1F5F9', borderRadius: '2px', overflow: 'hidden' }}>
+            <div style={{ height: '4px', background: 'var(--bg3)', borderRadius: '2px', overflow: 'hidden' }}>
               <div style={{ height: '100%', background: 'linear-gradient(90deg,#4338CA,#F97316)', borderRadius: '2px', width: `${progress}%`, transition: 'width 0.5s ease' }}></div>
             </div>
-            <p style={{ fontSize: '12px', color: '#94A3B8', marginTop: '4px', textAlign: 'left' }}>{progress}% مكتمل</p>
+            <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px', textAlign: 'left' }}>{progress}% مكتمل</p>
           </div>
 
-          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#0F172A', marginBottom: '4px' }}>
+          <h1 style={{ fontSize: '26px', fontWeight: 800, color: 'var(--text)', marginBottom: '4px' }}>
             {step === 1 ? 'انضم إلى سهل' : 'أنشئ حسابك'}
           </h1>
-          <p style={{ fontSize: '14px', color: '#475569', marginBottom: '28px' }}>
+          <p style={{ fontSize: '14px', color: 'var(--text2)', marginBottom: '28px' }}>
             {step === 1 ? 'اختر نوع حسابك لتبدأ رحلتك' : 'أدخل بياناتك لإنشاء الحساب'}
           </p>
 
@@ -253,41 +253,41 @@ const Register = () => {
                   onClick={() => { setForm(f => ({ ...f, role: r.key })); setStep(2); }}
                   style={{
                     padding: '18px 20px', borderRadius: '14px', cursor: 'pointer',
-                    border: form.role === r.key ? '2px solid #4338CA' : '1.5px solid #E2E8F0',
+                    border: form.role === r.key ? '2px solid #4338CA' : '1.5px solid var(--border)',
                     background: form.role === r.key ? '#EEF2FF' : '#fff',
                     display: 'flex', alignItems: 'center', gap: '14px', textAlign: 'right',
                     transition: 'all 0.2s', width: '100%', minHeight: '72px',
                     boxShadow: form.role === r.key ? '0 0 0 4px rgba(67,56,202,0.1)' : 'none',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#4338CA'; e.currentTarget.style.background = '#F8F9FF'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = form.role === r.key ? '#4338CA' : '#E2E8F0'; e.currentTarget.style.background = form.role === r.key ? '#EEF2FF' : '#fff'; }}>
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#4338CA'; e.currentTarget.style.background = 'var(--bg2)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = form.role === r.key ? '#4338CA' : 'var(--border)'; e.currentTarget.style.background = form.role === r.key ? '#EEF2FF' : '#fff'; }}>
                   <span style={{ fontSize: '32px' }}>{r.icon}</span>
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 700, fontSize: '16px', color: '#0F172A', margin: 0 }}>{r.label}</p>
-                    <p style={{ fontSize: '13px', color: '#475569', margin: '2px 0 0' }}>{r.desc}</p>
+                    <p style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)', margin: 0 }}>{r.label}</p>
+                    <p style={{ fontSize: '13px', color: 'var(--text2)', margin: '2px 0 0' }}>{r.desc}</p>
                   </div>
                   <span style={{ color: '#CBD5E1', fontSize: '20px' }}>←</span>
                 </button>
               ))}
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '8px 0' }}>
-                <div style={{ flex: 1, height: 1, background: '#E2E8F0' }}></div>
-                <span style={{ fontSize: '13px', color: '#94A3B8' }}>أو</span>
-                <div style={{ flex: 1, height: 1, background: '#E2E8F0' }}></div>
+                <div style={{ flex: 1, height: 1, background: 'var(--border)' }}></div>
+                <span style={{ fontSize: '13px', color: 'var(--muted)' }}>أو</span>
+                <div style={{ flex: 1, height: 1, background: 'var(--border)' }}></div>
               </div>
 
               <button onClick={handleGoogleLogin} style={{
-                width: '100%', padding: '14px', border: '1.5px solid #E2E8F0', borderRadius: '12px',
-                background: '#fff', fontSize: '15px', cursor: 'pointer',
+                width: '100%', padding: '14px', border: '1.5px solid var(--border)', borderRadius: '12px',
+                background: 'var(--card)', fontSize: '15px', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                fontFamily: 'Tajawal,sans-serif', fontWeight: 600, color: '#0F172A', minHeight: '52px',
+                fontFamily: 'Tajawal,sans-serif', fontWeight: 600, color: 'var(--text)', minHeight: '52px',
                 transition: 'background 0.2s',
               }}>
                 <GoogleIcon />
                 المتابعة بـ Google
               </button>
 
-              <p style={{ textAlign: 'center', fontSize: '14px', color: '#475569', marginTop: '4px' }}>
+              <p style={{ textAlign: 'center', fontSize: '14px', color: 'var(--text2)', marginTop: '4px' }}>
                 لديك حساب؟{' '}
                 <button onClick={() => navigate('/login')} style={{ border: 'none', background: 'none', color: '#4338CA', fontWeight: 600, cursor: 'pointer', fontSize: '14px', fontFamily: 'Tajawal,sans-serif' }}>
                   سجّل دخولك
@@ -315,14 +315,14 @@ const Register = () => {
               {/* الاسم */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <Field label="الاسم الأول *" required>
-                  <input style={inp({ borderColor: focusedField === 'firstName' ? '#4338CA' : (form.firstName ? '#10B981' : '#E2E8F0'), boxShadow: focusedField === 'firstName' ? '0 0 0 3px rgba(67,56,202,0.1)' : 'none' })}
+                  <input style={inp({ borderColor: focusedField === 'firstName' ? '#4338CA' : (form.firstName ? '#10B981' : 'var(--border)'), boxShadow: focusedField === 'firstName' ? '0 0 0 3px rgba(67,56,202,0.1)' : 'none' })}
                     value={form.firstName} onChange={set('firstName')}
                     placeholder="محمد" required autoComplete="given-name"
                     onFocus={() => setFocusedField('firstName')}
                     onBlur={() => setFocusedField('')} />
                 </Field>
                 <Field label="اسم العائلة">
-                  <input style={inp({ borderColor: focusedField === 'lastName' ? '#4338CA' : (form.lastName ? '#10B981' : '#E2E8F0'), boxShadow: focusedField === 'lastName' ? '0 0 0 3px rgba(67,56,202,0.1)' : 'none' })}
+                  <input style={inp({ borderColor: focusedField === 'lastName' ? '#4338CA' : (form.lastName ? '#10B981' : 'var(--border)'), boxShadow: focusedField === 'lastName' ? '0 0 0 3px rgba(67,56,202,0.1)' : 'none' })}
                     value={form.lastName} onChange={set('lastName')}
                     placeholder="الأحمدي" autoComplete="family-name"
                     onFocus={() => setFocusedField('lastName')}
@@ -332,7 +332,7 @@ const Register = () => {
 
               {/* رقم الهاتف */}
               <Field label="رقم الهاتف *">
-                <input style={inp({ borderColor: focusedField === 'phone' ? '#4338CA' : (form.phone ? '#10B981' : '#E2E8F0'), boxShadow: focusedField === 'phone' ? '0 0 0 3px rgba(67,56,202,0.1)' : 'none' })}
+                <input style={inp({ borderColor: focusedField === 'phone' ? '#4338CA' : (form.phone ? '#10B981' : 'var(--border)'), boxShadow: focusedField === 'phone' ? '0 0 0 3px rgba(67,56,202,0.1)' : 'none' })}
                   type="tel" value={form.phone} onChange={set('phone')}
                   placeholder="+968 XXXX XXXX" required dir="ltr" inputMode="tel" autoComplete="tel"
                   onFocus={() => setFocusedField('phone')}
@@ -341,7 +341,7 @@ const Register = () => {
 
               {/* البريد */}
               <Field label="البريد الإلكتروني *">
-                <input style={inp({ borderColor: focusedField === 'email' ? '#4338CA' : (form.email ? '#10B981' : '#E2E8F0'), boxShadow: focusedField === 'email' ? '0 0 0 3px rgba(67,56,202,0.1)' : 'none' })}
+                <input style={inp({ borderColor: focusedField === 'email' ? '#4338CA' : (form.email ? '#10B981' : 'var(--border)'), boxShadow: focusedField === 'email' ? '0 0 0 3px rgba(67,56,202,0.1)' : 'none' })}
                   type="email" value={form.email} onChange={set('email')}
                   placeholder="example@email.com" required dir="ltr"
                   autoComplete="email" inputMode="email"
@@ -354,7 +354,7 @@ const Register = () => {
                 <div style={{ position: 'relative' }}>
                   <input style={inp({
                     paddingLeft: '44px',
-                    borderColor: focusedField === 'password' ? '#4338CA' : form.password.length >= 8 ? '#10B981' : form.password ? '#F97316' : '#E2E8F0',
+                    borderColor: focusedField === 'password' ? '#4338CA' : form.password.length >= 8 ? '#10B981' : form.password ? '#F97316' : 'var(--border)',
                     boxShadow: focusedField === 'password' ? '0 0 0 3px rgba(67,56,202,0.1)' : 'none',
                   })}
                     type={form.showPassword ? 'text' : 'password'}
@@ -387,7 +387,7 @@ const Register = () => {
               <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
                 <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)}
                   style={{ width: '18px', height: '18px', accentColor: '#4338CA', marginTop: '2px', flexShrink: 0, cursor: 'pointer' }} />
-                <span style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
+                <span style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.5 }}>
                   أوافق على <span style={{ color: '#4338CA', fontWeight: 600 }}>الشروط والأحكام</span> وسياسة الخصوصية
                 </span>
               </label>
@@ -413,22 +413,22 @@ const Register = () => {
 
               {/* Google */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ flex: 1, height: 1, background: '#E2E8F0' }}></div>
-                <span style={{ fontSize: '12px', color: '#94A3B8' }}>أو سجّل بـ</span>
-                <div style={{ flex: 1, height: 1, background: '#E2E8F0' }}></div>
+                <div style={{ flex: 1, height: 1, background: 'var(--border)' }}></div>
+                <span style={{ fontSize: '12px', color: 'var(--muted)' }}>أو سجّل بـ</span>
+                <div style={{ flex: 1, height: 1, background: 'var(--border)' }}></div>
               </div>
 
               <button type="button" onClick={handleGoogleLogin} style={{
-                width: '100%', padding: '13px', border: '1.5px solid #E2E8F0', borderRadius: '12px',
-                background: '#fff', fontSize: '15px', cursor: 'pointer',
+                width: '100%', padding: '13px', border: '1.5px solid var(--border)', borderRadius: '12px',
+                background: 'var(--card)', fontSize: '15px', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                fontFamily: 'Tajawal,sans-serif', fontWeight: 600, color: '#0F172A', minHeight: '52px',
+                fontFamily: 'Tajawal,sans-serif', fontWeight: 600, color: 'var(--text)', minHeight: '52px',
                 transition: 'background 0.2s',
               }}>
                 <GoogleIcon /> المتابعة بـ Google
               </button>
 
-              <p style={{ textAlign: 'center', fontSize: '14px', color: '#475569' }}>
+              <p style={{ textAlign: 'center', fontSize: '14px', color: 'var(--text2)' }}>
                 لديك حساب؟{' '}
                 <button type="button" onClick={() => navigate('/login')} style={{ border: 'none', background: 'none', color: '#4338CA', fontWeight: 600, cursor: 'pointer', fontSize: '14px', fontFamily: 'Tajawal,sans-serif' }}>
                   سجّل دخولك
@@ -495,7 +495,7 @@ const PasswordStrength = ({ password }) => {
         {[1,2,3,4].map(i => (
           <div key={i} style={{
             flex: 1, height: '4px', borderRadius: '2px',
-            background: i <= score ? lvl.color : '#E2E8F0',
+            background: i <= score ? lvl.color : 'var(--border)',
             transition: 'background 0.3s',
           }}/>
         ))}

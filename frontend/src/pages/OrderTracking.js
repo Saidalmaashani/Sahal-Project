@@ -239,8 +239,8 @@ const OrderTracking = () => {
                         padding: '5px 12px', borderRadius: '20px', border: 'none',
                         cursor: 'pointer', fontSize: '12px', fontFamily: 'Tajawal,sans-serif',
                         fontWeight: 600, transition: 'all 0.2s',
-                        background: followDriver ? '#4338CA' : '#F1F5F9',
-                        color: followDriver ? '#fff' : '#475569',
+                        background: followDriver ? '#4338CA' : 'var(--bg3)',
+                        color: followDriver ? '#fff' : 'var(--text2)',
                       }}
                     >
                       <Crosshair style={{ width: '13px', height: '13px' }} />
@@ -359,7 +359,7 @@ const OrderTracking = () => {
                   {/* خط رأسي */}
                   <div style={{
                     position: 'absolute', right: '11px', top: '14px',
-                    bottom: '14px', width: '2px', background: '#E2E8F0', zIndex: 0,
+                    bottom: '14px', width: '2px', background: 'var(--border)', zIndex: 0,
                   }} />
                   {STATUS_STEPS.map((step, i) => {
                     const done = i <= currentStepIdx;
@@ -370,15 +370,15 @@ const OrderTracking = () => {
                         <div style={{
                           width: '24px', height: '24px', borderRadius: '50%', flexShrink: 0,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: done ? '#4338CA' : '#F1F5F9',
-                          border: active ? '3px solid #C7D2FE' : '2px solid ' + (done ? '#4338CA' : '#E2E8F0'),
+                          background: done ? '#4338CA' : 'var(--bg3)',
+                          border: active ? '3px solid #C7D2FE' : '2px solid ' + (done ? '#4338CA' : 'var(--border)'),
                           boxShadow: active ? '0 0 0 4px rgba(67,56,202,0.12)' : 'none',
                           transition: 'all 0.3s',
                         }}>
-                          <Icon style={{ width: '12px', height: '12px', color: done ? '#fff' : '#94A3B8' }} />
+                          <Icon style={{ width: '12px', height: '12px', color: done ? '#fff' : 'var(--muted)' }} />
                         </div>
                         <div>
-                          <p style={{ fontSize: '13px', fontWeight: active ? 700 : done ? 500 : 400, color: active ? '#4338CA' : done ? '#0F172A' : '#94A3B8' }}>
+                          <p style={{ fontSize: '13px', fontWeight: active ? 700 : done ? 500 : 400, color: active ? '#4338CA' : done ? 'var(--text)' : 'var(--muted)' }}>
                             {step.label}
                           </p>
                           {active && tracking.updated_at && (

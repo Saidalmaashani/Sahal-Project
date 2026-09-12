@@ -96,7 +96,7 @@ const OrderChat = ({ orderId, orderLabel, onClose }) => {
         }}
       >
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg,#4338CA,#7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <MessageCircle style={{ width: '18px', height: '18px', color: '#fff' }} />
@@ -109,11 +109,11 @@ const OrderChat = ({ orderId, orderLabel, onClose }) => {
                   مباشر
                 </span>
               </div>
-              <p style={{ fontSize: '11px', color: '#94A3B8', margin: 0 }}>#{orderLabel}</p>
+              <p style={{ fontSize: '11px', color: 'var(--muted)', margin: 0 }}>#{orderLabel}</p>
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-            <X style={{ width: 20, height: 20, color: '#94A3B8' }} />
+            <X style={{ width: 20, height: 20, color: 'var(--muted)' }} />
           </button>
         </div>
 
@@ -123,21 +123,21 @@ const OrderChat = ({ orderId, orderLabel, onClose }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '8px' }}>
               {[1,2,3].map(i => (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: i % 2 === 0 ? 'flex-end' : 'flex-start', gap: '4px' }}>
-                  <div style={{ width: i % 2 === 0 ? '60%' : '40%', height: '38px', borderRadius: '12px', background: '#F1F5F9', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+                  <div style={{ width: i % 2 === 0 ? '60%' : '40%', height: '38px', borderRadius: '12px', background: 'var(--bg3)', animation: 'shimmer 1.5s ease-in-out infinite' }} />
                 </div>
               ))}
             </div>
           ) : messages.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94A3B8' }}>
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
               <MessageCircle style={{ width: '44px', height: '44px', margin: '0 auto 10px', opacity: 0.35 }} />
-              <p style={{ fontSize: '14px', fontWeight: 600, margin: '0 0 4px', color: '#475569' }}>لا توجد رسائل بعد</p>
+              <p style={{ fontSize: '14px', fontWeight: 600, margin: '0 0 4px', color: 'var(--text2)' }}>لا توجد رسائل بعد</p>
               <p style={{ fontSize: '12px', margin: 0 }}>تواصل مع التاجر أو المندوب لأي استفسار</p>
             </div>
           ) : (
             <AnimatePresence initial={false}>
               {messages.map(msg => {
                 const isMe = msg.sender_id === user?.user_id;
-                const color = ROLE_COLORS[msg.sender_role] || '#475569';
+                const color = ROLE_COLORS[msg.sender_role] || 'var(--text2)';
                 return (
                   <motion.div
                     key={msg.message_id}
@@ -154,13 +154,13 @@ const OrderChat = ({ orderId, orderLabel, onClose }) => {
                     <div style={{
                       maxWidth: '78%', padding: '10px 14px',
                       borderRadius: isMe ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
-                      background: isMe ? '#4338CA' : '#F1F5F9',
-                      color: isMe ? '#fff' : '#0F172A',
+                      background: isMe ? '#4338CA' : 'var(--bg3)',
+                      color: isMe ? '#fff' : 'var(--text)',
                       fontSize: '14px', lineHeight: 1.55, wordBreak: 'break-word',
                     }}>
                       {msg.message}
                     </div>
-                    <span style={{ fontSize: '10px', color: '#94A3B8', marginTop: '3px' }}>
+                    <span style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '3px' }}>
                       {new Date(msg.created_at).toLocaleTimeString('ar-OM', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </motion.div>
@@ -172,7 +172,7 @@ const OrderChat = ({ orderId, orderLabel, onClose }) => {
         </div>
 
         {/* Input */}
-        <div style={{ padding: '12px 16px', borderTop: '1px solid #E2E8F0', display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+        <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
           <textarea
             value={text}
             onChange={e => setText(e.target.value)}
@@ -180,12 +180,12 @@ const OrderChat = ({ orderId, orderLabel, onClose }) => {
             placeholder="اكتب رسالتك... (Enter للإرسال)"
             rows={1}
             style={{
-              flex: 1, padding: '10px 12px', border: '1.5px solid #E2E8F0', borderRadius: '10px',
+              flex: 1, padding: '10px 12px', border: '1.5px solid var(--border)', borderRadius: '10px',
               fontSize: '14px', fontFamily: 'Tajawal,sans-serif', resize: 'none', outline: 'none',
               maxHeight: '100px', overflow: 'auto', lineHeight: 1.5, transition: 'border-color 0.2s',
             }}
             onFocus={e => e.target.style.borderColor = '#4338CA'}
-            onBlur={e => e.target.style.borderColor = '#E2E8F0'}
+            onBlur={e => e.target.style.borderColor = 'var(--border)'}
           />
           <motion.button
             whileTap={{ scale: 0.92 }}
@@ -194,7 +194,7 @@ const OrderChat = ({ orderId, orderLabel, onClose }) => {
             disabled={!text.trim() || sending}
             style={{
               padding: '10px 14px', borderRadius: '10px', border: 'none', flexShrink: 0,
-              background: text.trim() && !sending ? '#4338CA' : '#E2E8F0',
+              background: text.trim() && !sending ? '#4338CA' : 'var(--border)',
               color: '#fff', cursor: text.trim() && !sending ? 'pointer' : 'not-allowed',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'background 0.2s',

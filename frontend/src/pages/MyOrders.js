@@ -13,18 +13,18 @@ import ReviewForm from '../components/ReviewForm';
 import ThemeToggle from '../components/ThemeToggle';
 
 const OrderSkeleton = () => (
-  <div style={{ background: '#fff', borderRadius: '12px', padding: '20px', border: '1px solid #E2E8F0' }}>
+  <div style={{ background: 'var(--card)', borderRadius: '12px', padding: '20px', border: '1px solid var(--border)' }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
       <div>
-        <div style={{ width: '120px', height: '12px', background: '#F1F5F9', borderRadius: '6px', marginBottom: '8px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
-        <div style={{ width: '80px', height: '12px', background: '#F1F5F9', borderRadius: '6px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+        <div style={{ width: '120px', height: '12px', background: 'var(--bg3)', borderRadius: '6px', marginBottom: '8px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+        <div style={{ width: '80px', height: '12px', background: 'var(--bg3)', borderRadius: '6px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
       </div>
-      <div style={{ width: '70px', height: '24px', background: '#F1F5F9', borderRadius: '20px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+      <div style={{ width: '70px', height: '24px', background: 'var(--bg3)', borderRadius: '20px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
     </div>
-    <div style={{ width: '60%', height: '12px', background: '#F1F5F9', borderRadius: '6px', marginBottom: '16px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+    <div style={{ width: '60%', height: '12px', background: 'var(--bg3)', borderRadius: '6px', marginBottom: '16px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
     <div style={{ display: 'flex', gap: '8px' }}>
-      <div style={{ width: '90px', height: '32px', background: '#F1F5F9', borderRadius: '8px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
-      <div style={{ width: '70px', height: '32px', background: '#F1F5F9', borderRadius: '8px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+      <div style={{ width: '90px', height: '32px', background: 'var(--bg3)', borderRadius: '8px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+      <div style={{ width: '70px', height: '32px', background: 'var(--bg3)', borderRadius: '8px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
     </div>
     <style>{`@keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:.4} }`}</style>
   </div>
@@ -67,8 +67,8 @@ const MyOrders = () => {
         <div className="container mx-auto px-4 flex justify-between items-center">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <img src="/logo.png" alt="سهل" className="flex-shrink-0" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
-            <div style={{ width: '80px', height: '24px', background: '#F1F5F9', borderRadius: '8px', marginBottom: '6px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
-            <div style={{ width: '50px', height: '14px', background: '#F1F5F9', borderRadius: '6px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+            <div style={{ width: '80px', height: '24px', background: 'var(--bg3)', borderRadius: '8px', marginBottom: '6px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+            <div style={{ width: '50px', height: '14px', background: 'var(--bg3)', borderRadius: '6px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
           </div>
         </div>
       </header>

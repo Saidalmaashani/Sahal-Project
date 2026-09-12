@@ -61,7 +61,7 @@ const StoreLogo = ({ logo, onChange }) => {
           onClick={() => !uploading && inputRef.current?.click()}
           style={{
             width: '80px', height: '80px', borderRadius: '14px', flexShrink: 0,
-            border: '2px dashed #CBD5E1', background: '#F8FAFC',
+            border: '2px dashed #CBD5E1', background: 'var(--bg2)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', overflow: 'hidden', position: 'relative',
             transition: 'border-color 0.2s',
@@ -75,8 +75,8 @@ const StoreLogo = ({ logo, onChange }) => {
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#4338CA]"></div>
           ) : (
             <div style={{ textAlign: 'center' }}>
-              <Store style={{ width: '22px', height: '22px', color: '#94A3B8', margin: '0 auto 3px' }} />
-              <p style={{ fontSize: '10px', color: '#94A3B8', margin: 0 }}>اضغط لرفع</p>
+              <Store style={{ width: '22px', height: '22px', color: 'var(--muted)', margin: '0 auto 3px' }} />
+              <p style={{ fontSize: '10px', color: 'var(--muted)', margin: 0 }}>اضغط لرفع</p>
             </div>
           )}
           {logo && (
@@ -90,8 +90,8 @@ const StoreLogo = ({ logo, onChange }) => {
         <input ref={inputRef} type="file" accept="image/*" className="hidden"
           onChange={e => e.target.files[0] && handleFile(e.target.files[0])} />
         <div>
-          <p style={{ fontSize: '13px', color: '#0F172A', fontWeight: 500 }}>صورة/شعار المتجر</p>
-          <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>JPEG، PNG، WebP — الحد الأقصى 5MB</p>
+          <p style={{ fontSize: '13px', color: 'var(--text)', fontWeight: 500 }}>صورة/شعار المتجر</p>
+          <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>JPEG، PNG، WebP — الحد الأقصى 5MB</p>
           {logo && <p style={{ fontSize: '11px', color: '#10B981', marginTop: '3px' }}>✓ تم رفع الشعار</p>}
         </div>
       </div>
@@ -150,7 +150,7 @@ const ImageUploader = ({ images, onChange, maxImages = 10 }) => {
           onClick={() => inputRef.current?.click()}
           style={{
             border: '2px dashed #CBD5E1', borderRadius: '12px', padding: '24px',
-            textAlign: 'center', cursor: 'pointer', background: '#F8FAFC',
+            textAlign: 'center', cursor: 'pointer', background: 'var(--bg2)',
             transition: 'all 0.2s', marginBottom: '12px'
           }}
           onMouseEnter={e => e.currentTarget.style.borderColor = '#4338CA'}
@@ -177,7 +177,7 @@ const ImageUploader = ({ images, onChange, maxImages = 10 }) => {
       {images.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
           {images.map((url, idx) => (
-            <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', border: idx === 0 ? '2px solid #4338CA' : '1px solid #E2E8F0' }}>
+            <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', border: idx === 0 ? '2px solid #4338CA' : '1px solid var(--border)' }}>
               <img src={url} alt={`صورة ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 onError={e => { e.target.src = 'https://via.placeholder.com/100?text=Error'; }} />
               {idx === 0 && (
@@ -293,9 +293,9 @@ const ProductForm = ({ onSuccess, onClose, editProduct = null }) => {
               value={form.description} onChange={set('description')}
               placeholder="اشرح مميزات المنتج، المواصفات، وأي تفاصيل مهمة..."
               rows={4}
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '14px', fontFamily: 'Tajawal,sans-serif', resize: 'vertical', background: '#fff', outline: 'none' }}
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', fontFamily: 'Tajawal,sans-serif', resize: 'vertical', background: 'var(--card)', outline: 'none' }}
               onFocus={e => e.target.style.borderColor = '#4338CA'}
-              onBlur={e => e.target.style.borderColor = '#E2E8F0'}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'}
             />
           </div>
 
@@ -318,7 +318,7 @@ const ProductForm = ({ onSuccess, onClose, editProduct = null }) => {
                 <Input type="number" min="0" step="0.001" value={form.price}
                   onChange={set('price')} placeholder="0.000" dir="ltr"
                   style={{ paddingLeft: '48px' }} />
-                <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: '#475569', fontWeight: 600 }}>ر.ع</span>
+                <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: 'var(--text2)', fontWeight: 600 }}>ر.ع</span>
               </div>
             </div>
             <div>
@@ -335,19 +335,19 @@ const ProductForm = ({ onSuccess, onClose, editProduct = null }) => {
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#475569' }}>سعرك (دخلك)</span>
+                  <span style={{ color: 'var(--text2)' }}>سعرك (دخلك)</span>
                   <span style={{ fontWeight: 700, color: '#10B981' }}>{merchantPrice.toFixed(3)} ر.ع</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#475569' }}>رسوم الإدارة (4%)</span>
+                  <span style={{ color: 'var(--text2)' }}>رسوم الإدارة (4%)</span>
                   <span style={{ color: '#F97316' }}>{adminFee.toFixed(3)} ر.ع</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#475569' }}>رسوم التوصيل (4%)</span>
+                  <span style={{ color: 'var(--text2)' }}>رسوم التوصيل (4%)</span>
                   <span style={{ color: '#F97316' }}>{driverFee.toFixed(3)} ر.ع</span>
                 </div>
                 <div style={{ borderTop: '1px solid #C7D2FE', paddingTop: '6px', display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontWeight: 600, color: '#0F172A' }}>سعر العميل النهائي</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text)' }}>سعر العميل النهائي</span>
                   <span style={{ fontWeight: 700, color: '#4338CA', fontSize: '15px' }}>{customerPrice.toFixed(3)} ر.ع</span>
                 </div>
               </div>
@@ -376,7 +376,7 @@ const ProductForm = ({ onSuccess, onClose, editProduct = null }) => {
       </div>
 
       {/* أزرار الحفظ */}
-      <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
+      <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
         <Button variant="outline" onClick={onClose}>إلغاء</Button>
         <Button
           onClick={handleSubmit} disabled={loading}
@@ -517,14 +517,14 @@ const MerchantDashboard = () => {
     return (
       <div style={{ background: cfg.color, border: `1px solid ${cfg.border}`, borderRadius: '12px', padding: '16px', marginBottom: '24px', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
         {store.logo ? (
-          <img src={store.logo} alt={store.name} style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', border: '2px solid #E2E8F0', flexShrink: 0 }} />
+          <img src={store.logo} alt={store.name} style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', border: '2px solid var(--border)', flexShrink: 0 }} />
         ) : (
           <Icon style={{ width: '24px', height: '24px', color: cfg.iconColor, flexShrink: 0, marginTop: '2px' }} />
         )}
         <div>
           <p style={{ fontWeight: 700, fontSize: '16px', marginBottom: '2px' }}>{store.name}</p>
-          <p style={{ fontSize: '13px', color: '#475569' }}>{cfg.text}</p>
-          {store.description && <p style={{ fontSize: '12px', color: '#94A3B8', marginTop: '4px' }}>{store.description}</p>}
+          <p style={{ fontSize: '13px', color: 'var(--text2)' }}>{cfg.text}</p>
+          {store.description && <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>{store.description}</p>}
         </div>
         {store.status === 'approved' && (
           <Button
@@ -681,7 +681,7 @@ const MerchantDashboard = () => {
                                 {p.images?.[0] ? (
                                   <div style={{ position: 'relative', width: '48px', height: '48px' }}>
                                     <img src={p.images[0]} alt={p.name}
-                                      style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #E2E8F0' }}
+                                      style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)' }}
                                       onError={e => { e.target.style.display = 'none'; }} />
                                     {p.images.length > 1 && (
                                       <span style={{ position: 'absolute', bottom: '-4px', left: '-4px', background: '#4338CA', color: '#fff', fontSize: '9px', padding: '1px 4px', borderRadius: '6px', fontWeight: 600 }}>
@@ -690,8 +690,8 @@ const MerchantDashboard = () => {
                                     )}
                                   </div>
                                 ) : (
-                                  <div style={{ width: '48px', height: '48px', background: '#F1F5F9', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <ImageIcon style={{ width: '20px', height: '20px', color: '#94A3B8' }} />
+                                  <div style={{ width: '48px', height: '48px', background: 'var(--bg3)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <ImageIcon style={{ width: '20px', height: '20px', color: 'var(--muted)' }} />
                                   </div>
                                 )}
                               </TableCell>
@@ -826,7 +826,7 @@ const MerchantDashboard = () => {
                 onChange={e => setStoreForm(f => ({ ...f, description: e.target.value }))}
                 placeholder="اشرح ما تبيعه في متجرك..."
                 rows={3}
-                style={{ width: '100%', padding: '8px 12px', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '14px', fontFamily: 'Tajawal,sans-serif', resize: 'none' }}
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', fontFamily: 'Tajawal,sans-serif', resize: 'none' }}
               />
             </div>
             <Button className="w-full bg-[#4338CA] hover:bg-[#3730A3]"
@@ -865,7 +865,7 @@ const MerchantDashboard = () => {
                 {/* قسم الصور */}
                 <div>
                   {/* الصورة الرئيسية */}
-                  <div style={{ width: '100%', aspectRatio: '1', background: '#F1F5F9', borderRadius: '12px', overflow: 'hidden', border: '1px solid #E2E8F0' }}>
+                  <div style={{ width: '100%', aspectRatio: '1', background: 'var(--bg3)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
                     {imgs.length > 0 ? (
                       <img
                         src={imgs[selectedImgIdx]}
@@ -875,7 +875,7 @@ const MerchantDashboard = () => {
                       />
                     ) : (
                       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <ImageIcon style={{ width: '48px', height: '48px', color: '#94A3B8' }} />
+                        <ImageIcon style={{ width: '48px', height: '48px', color: 'var(--muted)' }} />
                       </div>
                     )}
                   </div>
@@ -889,8 +889,8 @@ const MerchantDashboard = () => {
                           onClick={() => setSelectedImgIdx(i)}
                           style={{
                             aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', padding: 0, cursor: 'pointer',
-                            border: selectedImgIdx === i ? '2px solid #4338CA' : '1px solid #E2E8F0',
-                            background: '#fff', transition: 'border-color 0.15s',
+                            border: selectedImgIdx === i ? '2px solid #4338CA' : '1px solid var(--border)',
+                            background: 'var(--card)', transition: 'border-color 0.15s',
                           }}
                         >
                           <img
@@ -904,7 +904,7 @@ const MerchantDashboard = () => {
                     </div>
                   )}
                   {imgs.length > 0 && (
-                    <p style={{ fontSize: '11px', color: '#94A3B8', textAlign: 'center', marginTop: '4px' }}>
+                    <p style={{ fontSize: '11px', color: 'var(--muted)', textAlign: 'center', marginTop: '4px' }}>
                       {selectedImgIdx + 1} / {imgs.length} صورة
                     </p>
                   )}

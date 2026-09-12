@@ -175,7 +175,7 @@ const NotificationBell = () => {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
       {/* Header */}
       <div style={{
-        padding: '14px 16px', borderBottom: '1px solid #F1F5F9',
+        padding: '14px 16px', borderBottom: '1px solid var(--border2)',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         flexShrink: 0,
       }}>
@@ -195,11 +195,11 @@ const NotificationBell = () => {
             </button>
           )}
           <button onClick={clearRead} aria-label="حذف المقروء"
-            style={{ padding: '6px', border: 'none', background: 'none', cursor: 'pointer', color: '#94A3B8', borderRadius: '8px', display: 'flex', alignItems: 'center', minWidth: 36, minHeight: 36 }}>
+            style={{ padding: '6px', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--muted)', borderRadius: '8px', display: 'flex', alignItems: 'center', minWidth: 36, minHeight: 36 }}>
             <Trash2 style={{ width: 16, height: 16 }} />
           </button>
           <button onClick={close} aria-label="إغلاق"
-            style={{ padding: '6px', border: 'none', background: 'none', cursor: 'pointer', color: '#94A3B8', borderRadius: '8px', display: 'flex', alignItems: 'center', minWidth: 36, minHeight: 36 }}>
+            style={{ padding: '6px', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--muted)', borderRadius: '8px', display: 'flex', alignItems: 'center', minWidth: 36, minHeight: 36 }}>
             <X style={{ width: 18, height: 18 }} />
           </button>
         </div>
@@ -209,7 +209,7 @@ const NotificationBell = () => {
       {pushStatus !== 'unsupported' && pushStatus !== 'denied' && (
         <div style={{
           padding: '10px 16px',
-          borderBottom: '1px solid #F1F5F9',
+          borderBottom: '1px solid var(--border2)',
           background: pushStatus === 'granted' ? '#F0FDF4' : '#FFF7ED',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
           flexShrink: 0,
@@ -256,7 +256,7 @@ const NotificationBell = () => {
         overflowY: 'auto', WebkitOverflowScrolling: 'touch',
       }}>
         {notifs.length === 0 ? (
-          <div style={{ padding: '48px 16px', textAlign: 'center', color: '#94A3B8' }}>
+          <div style={{ padding: '48px 16px', textAlign: 'center', color: 'var(--muted)' }}>
             <Bell style={{ width: 40, height: 40, margin: '0 auto 10px', opacity: 0.3 }} />
             <p style={{ fontSize: '14px', margin: 0 }}>لا توجد إشعارات</p>
           </div>
@@ -270,7 +270,7 @@ const NotificationBell = () => {
               style={{
                 display: 'flex', gap: '12px', padding: '14px 16px',
                 borderBottom: '1px solid #F8FAFC',
-                background: n.is_read ? '#fff' : '#F8F9FF',
+                background: n.is_read ? '#fff' : 'var(--bg2)',
                 cursor: n.link ? 'pointer' : 'default',
                 transition: 'background 0.15s',
                 alignItems: 'flex-start',
@@ -284,10 +284,10 @@ const NotificationBell = () => {
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                  <p style={{ fontSize: '13px', fontWeight: 600, color: '#0F172A', margin: 0, lineHeight: 1.4 }}>{n.title}</p>
-                  <span style={{ fontSize: '11px', color: '#94A3B8', flexShrink: 0, marginTop: '2px' }}>{timeAgo(n.created_at)}</span>
+                  <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', margin: 0, lineHeight: 1.4 }}>{n.title}</p>
+                  <span style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0, marginTop: '2px' }}>{timeAgo(n.created_at)}</span>
                 </div>
-                <p style={{ fontSize: '12px', color: '#475569', margin: '4px 0 0', lineHeight: 1.5 }}>{n.message}</p>
+                <p style={{ fontSize: '12px', color: 'var(--text2)', margin: '4px 0 0', lineHeight: 1.5 }}>{n.message}</p>
               </div>
 
               {!n.is_read && (
@@ -300,7 +300,7 @@ const NotificationBell = () => {
 
       {/* Footer */}
       {notifs.length > 0 && (
-        <div style={{ padding: '10px 16px', borderTop: '1px solid #F1F5F9', textAlign: 'center', flexShrink: 0 }}>
+        <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border2)', textAlign: 'center', flexShrink: 0 }}>
           <button onClick={() => { navigate('/my-orders'); close(); }}
             style={{ fontSize: '13px', color: '#4338CA', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Tajawal,sans-serif', fontWeight: 600, padding: '8px' }}>
             عرض طلباتي ←
@@ -320,14 +320,14 @@ const NotificationBell = () => {
         onClick={() => setOpen(!open)}
         style={{
           position: 'relative', padding: '8px',
-          border: '1px solid #E2E8F0', borderRadius: '8px',
+          border: '1px solid var(--border)', borderRadius: '8px',
           background: open ? '#EEF2FF' : '#fff',
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           minWidth: 44, minHeight: 44, transition: 'background 0.15s'
         }}
         aria-label="الإشعارات"
       >
-        <Bell style={{ width: 20, height: 20, color: open ? '#4338CA' : '#475569' }} />
+        <Bell style={{ width: 20, height: 20, color: open ? '#4338CA' : 'var(--text2)' }} />
         <AnimatePresence>
           {unread > 0 && (
             <motion.span

@@ -188,10 +188,10 @@ const CustomerProfile = () => {
               }}>{initials}</div>
 
               <div className="flex-1 mt-2">
-                <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#0F172A' }}>{profile.name}</h2>
-                <p style={{ fontSize: '14px', color: '#475569' }} dir="ltr">{profile.email}</p>
+                <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text)' }}>{profile.name}</h2>
+                <p style={{ fontSize: '14px', color: 'var(--text2)' }} dir="ltr">{profile.email}</p>
                 {profile.phone && (
-                  <p style={{ fontSize: '13px', color: '#475569', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                  <p style={{ fontSize: '13px', color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                     <Phone style={{ width: '13px', height: '13px' }} />{profile.phone}
                   </p>
                 )}
@@ -206,7 +206,7 @@ const CustomerProfile = () => {
                 ].map((s, i) => (
                   <div key={i} style={{ textAlign: 'center', minWidth: '60px' }}>
                     <p style={{ fontSize: '22px', fontWeight: 700, color: s.color }}>{s.value}</p>
-                    <p style={{ fontSize: '11px', color: '#475569' }}>{s.label}</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text2)' }}>{s.label}</p>
                   </div>
                 ))}
               </div>
@@ -215,7 +215,7 @@ const CustomerProfile = () => {
         </Card>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '4px', background: '#F1F5F9', padding: '4px', borderRadius: '12px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', gap: '4px', background: 'var(--bg3)', padding: '4px', borderRadius: '12px', marginBottom: '20px' }}>
           {[
             { key: 'profile', label: 'بياناتي', icon: User },
             { key: 'location', label: 'موقعي', icon: MapPin },
@@ -227,7 +227,7 @@ const CustomerProfile = () => {
               fontSize: '13px', cursor: 'pointer', fontFamily: 'Tajawal,sans-serif',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
               background: activeTab === key ? '#fff' : 'transparent',
-              color: activeTab === key ? '#4338CA' : '#475569',
+              color: activeTab === key ? '#4338CA' : 'var(--text2)',
               fontWeight: activeTab === key ? 600 : 400,
               boxShadow: activeTab === key ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
               transition: 'all 0.15s'
@@ -280,7 +280,7 @@ const CustomerProfile = () => {
                 </div>
                 <div>
                   <Label>البريد الإلكتروني</Label>
-                  <p style={{ padding: '8px 0', fontSize: '15px', color: '#475569' }} dir="ltr">{profile.email}</p>
+                  <p style={{ padding: '8px 0', fontSize: '15px', color: 'var(--text2)' }} dir="ltr">{profile.email}</p>
                 </div>
                 <div>
                   <Label className="flex items-center gap-1">
@@ -308,7 +308,7 @@ const CustomerProfile = () => {
                       placeholder="الحي، الشارع، رقم المبنى..." />
                   ) : (
                     <p style={{ padding: '8px 0', fontSize: '15px' }}>
-                      {profile.address || <span style={{ color: '#94A3B8' }}>لم يُضف بعد</span>}
+                      {profile.address || <span style={{ color: 'var(--muted)' }}>لم يُضف بعد</span>}
                     </p>
                   )}
                 </div>
@@ -343,7 +343,7 @@ const CustomerProfile = () => {
                   <CheckCircle style={{ color: '#16A34A', width: '20px', height: '20px', flexShrink: 0 }} />
                   <div>
                     <p style={{ fontWeight: 600, color: '#15803D' }}>موقعك محدد ✓</p>
-                    <p style={{ fontSize: '12px', color: '#475569', direction: 'ltr' }}>
+                    <p style={{ fontSize: '12px', color: 'var(--text2)', direction: 'ltr' }}>
                       {parseFloat(profile.lat).toFixed(4)}, {parseFloat(profile.lng).toFixed(4)}
                     </p>
                   </div>
@@ -362,8 +362,8 @@ const CustomerProfile = () => {
                     {detecting ? 'جارٍ التحديد...' : 'تحديد موقعي الحالي تلقائياً'}
                   </Button>
 
-                  <div ref={mapRef} style={{ height: '360px', borderRadius: '12px', border: '1px solid #E2E8F0', overflow: 'hidden' }}></div>
-                  <p style={{ fontSize: '12px', color: '#94A3B8', textAlign: 'center' }}>
+                  <div ref={mapRef} style={{ height: '360px', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}></div>
+                  <p style={{ fontSize: '12px', color: 'var(--muted)', textAlign: 'center' }}>
                     اضغط على الخريطة أو اسحب العلامة لتحديد موقعك بدقة
                   </p>
 
@@ -396,8 +396,8 @@ const CustomerProfile = () => {
                   <CardContent className="p-5">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <p style={{ fontFamily: 'monospace', fontSize: '12px', color: '#475569' }} dir="ltr">{order.order_id}</p>
-                        <p style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>
+                        <p style={{ fontFamily: 'monospace', fontSize: '12px', color: 'var(--text2)' }} dir="ltr">{order.order_id}</p>
+                        <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
                           {new Date(order.created_at).toLocaleDateString('ar-OM', { day: 'numeric', month: 'long', year: 'numeric' })}
                         </p>
                       </div>
@@ -410,15 +410,15 @@ const CustomerProfile = () => {
                     {order.items?.length > 0 && (
                       <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
                         {order.items.slice(0, 4).map((item, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F8F9FA', padding: '4px 10px', borderRadius: '20px', fontSize: '12px' }}>
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg2)', padding: '4px 10px', borderRadius: '20px', fontSize: '12px' }}>
                             {item.product?.images?.[0] && (
                               <img src={item.product.images[0]} alt="" style={{ width: '20px', height: '20px', borderRadius: '4px', objectFit: 'cover' }} />
                             )}
                             <span>{item.product?.name || 'منتج'}</span>
-                            <span style={{ color: '#94A3B8' }}>×{item.quantity}</span>
+                            <span style={{ color: 'var(--muted)' }}>×{item.quantity}</span>
                           </div>
                         ))}
-                        {order.items.length > 4 && <span style={{ fontSize: '12px', color: '#94A3B8', alignSelf: 'center' }}>+{order.items.length - 4} أخرى</span>}
+                        {order.items.length > 4 && <span style={{ fontSize: '12px', color: 'var(--muted)', alignSelf: 'center' }}>+{order.items.length - 4} أخرى</span>}
                       </div>
                     )}
 
@@ -452,7 +452,7 @@ const CustomerProfile = () => {
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '12px', padding: '16px' }}>
                   <p style={{ fontSize: '11px', opacity: 0.7, marginBottom: '8px' }}>رمز الإحالة الخاص بك</p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', color: '#0F172A', borderRadius: '8px', padding: '10px 16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--card)', color: 'var(--text)', borderRadius: '8px', padding: '10px 16px' }}>
                     <span style={{ fontFamily: 'monospace', fontSize: '20px', fontWeight: 700, letterSpacing: '3px' }}>
                       {profile.referral_code || '—'}
                     </span>

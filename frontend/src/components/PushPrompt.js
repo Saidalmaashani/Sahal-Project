@@ -13,7 +13,7 @@ const IOSGuide = ({ onClose }) => (
     zIndex: 99999, display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
   }}>
     <div style={{
-      background: '#fff', borderRadius: '20px 20px 0 0',
+      background: 'var(--card)', borderRadius: '20px 20px 0 0',
       padding: '24px 20px 40px', maxWidth: '480px', width: '100%',
       direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif',
       maxHeight: '85vh', overflowY: 'auto',
@@ -21,7 +21,7 @@ const IOSGuide = ({ onClose }) => (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <h3 style={{ fontWeight: 700, fontSize: '18px', margin: 0 }}>تفعيل الإشعارات على iPhone</h3>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-          <X style={{ width: 22, height: 22, color: '#475569' }} />
+          <X style={{ width: 22, height: 22, color: 'var(--text2)' }} />
         </button>
       </div>
 
@@ -59,8 +59,8 @@ const IOSGuide = ({ onClose }) => (
       ].map(step => (
         <div key={step.num} style={{
           display: 'flex', gap: '12px', marginBottom: '16px', alignItems: 'flex-start',
-          background: step.important ? '#FFF7ED' : '#F8FAFC',
-          border: `1px solid ${step.important ? '#FED7AA' : '#E2E8F0'}`,
+          background: step.important ? '#FFF7ED' : 'var(--bg2)',
+          border: `1px solid ${step.important ? '#FED7AA' : 'var(--border)'}`,
           borderRadius: '12px', padding: '12px',
         }}>
           <div style={{
@@ -70,10 +70,10 @@ const IOSGuide = ({ onClose }) => (
             fontWeight: 700, fontSize: '14px',
           }}>{step.num}</div>
           <div>
-            <p style={{ fontWeight: 700, fontSize: '14px', margin: '0 0 4px', color: '#0F172A' }}>
+            <p style={{ fontWeight: 700, fontSize: '14px', margin: '0 0 4px', color: 'var(--text)' }}>
               {step.important ? '⚠️ ' : ''}{step.title}
             </p>
-            <p style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: 1.6 }}>{step.desc}</p>
+            <p style={{ fontSize: '13px', color: 'var(--text2)', margin: 0, lineHeight: 1.6 }}>{step.desc}</p>
           </div>
         </div>
       ))}
@@ -150,26 +150,26 @@ const DiagnosticPanel = ({ onClose, onRefreshed }) => {
            : <AlertCircle style={{ width: 15, height: 15, color: '#E11D48', flexShrink: 0, marginTop: 1 }} />}
       <div>
         <p style={{ fontWeight: 600, fontSize: '13px', margin: '0 0 2px', color: ok ? '#065F46' : '#BE123C' }}>{label}</p>
-        {detail && <p style={{ fontSize: '11px', color: '#475569', margin: 0, lineHeight: 1.5 }}>{detail}</p>}
+        {detail && <p style={{ fontSize: '11px', color: 'var(--text2)', margin: 0, lineHeight: 1.5 }}>{detail}</p>}
       </div>
     </div>
   );
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 99998, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-      <div style={{ background: '#fff', borderRadius: '16px', padding: '20px', maxWidth: '460px', width: '100%', direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif', maxHeight: '85vh', overflowY: 'auto' }}>
+      <div style={{ background: 'var(--card)', borderRadius: '16px', padding: '20px', maxWidth: '460px', width: '100%', direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif', maxHeight: '85vh', overflowY: 'auto' }}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h3 style={{ fontWeight: 700, fontSize: '17px', margin: 0 }}>تشخيص الإشعارات</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-            <X style={{ width: 20, height: 20, color: '#94A3B8' }} />
+            <X style={{ width: 20, height: 20, color: 'var(--muted)' }} />
           </button>
         </div>
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '30px' }}>
             <div style={{ width: '32px', height: '32px', border: '3px solid #4338CA', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }}></div>
-            <p style={{ fontSize: '13px', color: '#475569', margin: 0 }}>جارٍ الفحص...</p>
+            <p style={{ fontSize: '13px', color: 'var(--text2)', margin: 0 }}>جارٍ الفحص...</p>
           </div>
         ) : status?.error ? (
           <p style={{ color: '#E11D48', fontSize: '13px' }}>خطأ: {status.error}</p>
@@ -227,12 +227,12 @@ const DiagnosticPanel = ({ onClose, onRefreshed }) => {
                 <p style={{ fontWeight: 700, fontSize: '13px', margin: '0 0 4px', color: testResult.ok ? '#065F46' : '#BE123C' }}>
                   {testResult.ok ? '✅ تم الإرسال بنجاح!' : '❌ فشل الإرسال'}
                 </p>
-                <p style={{ fontSize: '12px', color: '#475569', margin: '0 0 6px' }}>{testResult.hint}</p>
+                <p style={{ fontSize: '12px', color: 'var(--text2)', margin: '0 0 6px' }}>{testResult.hint}</p>
 
                 {/* تفاصيل كل اشتراك */}
                 {testResult.results?.map((r, i) => (
-                  <div key={i} style={{ fontSize: '11px', padding: '4px 0', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#475569' }}>{r.platform}</span>
+                  <div key={i} style={{ fontSize: '11px', padding: '4px 0', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text2)' }}>{r.platform}</span>
                     <span style={{ fontWeight: 600, color: r.status === 'sent' ? '#10B981' : '#E11D48' }}>
                       {r.status === 'sent' ? '✓ أُرسل' : `✗ ${r.error || 'فشل'}`}
                     </span>
@@ -334,7 +334,7 @@ const PushPrompt = () => {
       <div style={{
         position: 'fixed', bottom: '16px', right: '16px', left: '16px',
         maxWidth: '420px', margin: '0 auto',
-        background: '#fff', border: '1px solid #E2E8F0',
+        background: 'var(--card)', border: '1px solid var(--border)',
         borderRadius: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
         padding: '16px', zIndex: 9999,
         direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif',
@@ -349,10 +349,10 @@ const PushPrompt = () => {
         </div>
 
         <div style={{ flex: 1 }}>
-          <p style={{ fontWeight: 700, fontSize: '15px', color: '#0F172A', margin: '0 0 4px' }}>
+          <p style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)', margin: '0 0 4px' }}>
             فعّل إشعارات سهل 🔔
           </p>
-          <p style={{ fontSize: '13px', color: '#475569', margin: '0 0 12px', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '13px', color: 'var(--text2)', margin: '0 0 12px', lineHeight: 1.5 }}>
             اعرف فوراً عند وصول طلبك أو طلب جديد، حتى الشاشة مطفية
           </p>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -374,8 +374,8 @@ const PushPrompt = () => {
             </button>
             <button onClick={() => { setPromptVisible(false); localStorage.setItem('push_prompt_dismissed', '1'); }} style={{
               padding: '8px 12px', borderRadius: '10px',
-              border: '1px solid #E2E8F0', background: 'none',
-              fontSize: '13px', color: '#94A3B8', cursor: 'pointer',
+              border: '1px solid var(--border)', background: 'none',
+              fontSize: '13px', color: 'var(--muted)', cursor: 'pointer',
               fontFamily: 'Tajawal,sans-serif',
             }}>
               لاحقاً
@@ -385,7 +385,7 @@ const PushPrompt = () => {
 
         <button onClick={() => { setPromptVisible(false); localStorage.setItem('push_prompt_dismissed', '1'); }}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', flexShrink: 0 }}>
-          <X style={{ width: '16px', height: '16px', color: '#94A3B8' }} />
+          <X style={{ width: '16px', height: '16px', color: 'var(--muted)' }} />
         </button>
       </div>
 
