@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api';
@@ -351,7 +352,8 @@ const NotificationBell = () => {
         </AnimatePresence>
       </motion.button>
 
-      {/* لوحة الإشعارات */}
+      {/* لوحة الإشعارات — تُرسم في body عبر Portal حتى لا يتأثر fixed بالعناصر المتحوّلة فوقه (iOS) */}
+      {typeof document !== 'undefined' && createPortal(
       <AnimatePresence>
       {open && (isMobile ? (
         <>
@@ -394,7 +396,7 @@ const NotificationBell = () => {
               style={{
                 width: 'min(90vw, 380px)',
                 maxWidth: '100%',
-                maxHeight: 'min(82vh, 700px)',
+                maxHeight: 'min(82dvh, 700px)',
                 background: t.card,
                 border: `1px solid ${t.border}`,
                 borderRadius: '20px',
@@ -441,7 +443,9 @@ const NotificationBell = () => {
           {panelContent}
         </motion.div>
       ))}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
     </div>
   );
 };
