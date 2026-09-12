@@ -50,9 +50,12 @@ const StoreDetail = () => {
     <div className="min-h-screen bg-[#F8F9FA]">
       <header className="bg-white border-b border-[#E2E8F0] py-4 sticky top-0 z-50">
         <div className="container mx-auto px-4 flex justify-between items-center">
-          <Button variant="ghost" onClick={() => navigate("/shop")}>
-            <ArrowRight className="h-4 w-4 ml-2" />العودة للمتجر
-          </Button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img src="/logo.png" alt="سهل" className="flex-shrink-0" style={{ height: 30, width: 'auto', objectFit: 'contain' }} />
+            <Button variant="ghost" onClick={() => navigate("/shop")}>
+              <ArrowRight className="h-4 w-4 ml-2" />العودة للمتجر
+            </Button>
+          </div>
           {user && (
             <Button variant="outline" size="sm" onClick={() => navigate("/cart")}>
               <ShoppingCart className="h-4 w-4 ml-2" />السلة

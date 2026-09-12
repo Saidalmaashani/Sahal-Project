@@ -68,9 +68,10 @@ const DeliveryConfirmPage = () => {
   return (
     <div style={{
       minHeight: '100vh', background: 'linear-gradient(135deg,#EEF2FF 0%,#F0FDF4 100%)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       padding: 16, direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif',
     }}>
+      <img src="/logo.png" alt="سهل" style={{ height: 64, width: 'auto', objectFit: 'contain', marginBottom: 20 }} />
       <AnimatePresence mode="wait">
 
         {/* تحميل */}

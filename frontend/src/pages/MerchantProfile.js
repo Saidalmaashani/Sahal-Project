@@ -81,9 +81,12 @@ const MerchantProfile = () => {
     <div className="min-h-screen bg-[#F8F9FA]" style={{ direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif' }}>
       <header className="bg-white border-b border-[#E2E8F0] py-4">
         <div className="container mx-auto px-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">موقع المتجر</h1>
-            <p className="text-sm text-[#475569]">يستخدمه المندوبون لاستلام الطلبات منك</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img src="/logo.png" alt="سهل" className="flex-shrink-0" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
+            <div>
+              <h1 className="text-2xl font-bold">موقع المتجر</h1>
+              <p className="text-sm text-[#475569]">يستخدمه المندوبون لاستلام الطلبات منك</p>
+            </div>
           </div>
           <Button variant="outline" onClick={() => navigate('/merchant/dashboard')}>
             العودة للوحة التحكم

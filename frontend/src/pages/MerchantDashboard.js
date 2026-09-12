@@ -547,17 +547,20 @@ const MerchantDashboard = () => {
       {/* Header */}
       <header className="bg-white border-b border-[#E2E8F0] py-4">
         <div className="container mx-auto px-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              {store?.name ? `متجر ${store.name}` : 'لوحة التاجر'}
-            </h1>
-            <p className="text-sm text-[#475569]">
-              {store?.status === 'approved'
-                ? `مرحباً بك في متجرك — ${user?.name}`
-                : store
-                  ? `مرحباً ${user?.name} — متجرك ${store.status === 'pending' ? 'قيد المراجعة' : 'مرفوض'}`
-                  : `مرحباً ${user?.name} — ابدأ بإنشاء متجرك`}
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img src="/logo.png" alt="سهل" className="flex-shrink-0" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                {store?.name ? `متجر ${store.name}` : 'لوحة التاجر'}
+              </h1>
+              <p className="text-sm text-[#475569]">
+                {store?.status === 'approved'
+                  ? `مرحباً بك في متجرك — ${user?.name}`
+                  : store
+                    ? `مرحباً ${user?.name} — متجرك ${store.status === 'pending' ? 'قيد المراجعة' : 'مرفوض'}`
+                    : `مرحباً ${user?.name} — ابدأ بإنشاء متجرك`}
+              </p>
+            </div>
           </div>
           <div className="flex gap-2 items-center">
             <ThemeToggle size="sm" />

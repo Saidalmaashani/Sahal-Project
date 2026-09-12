@@ -65,7 +65,8 @@ const MyOrders = () => {
     <div className="min-h-screen bg-[#F8F9FA]" style={{ direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif' }}>
       <header className="bg-white border-b border-[#E2E8F0] py-4">
         <div className="container mx-auto px-4 flex justify-between items-center">
-          <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img src="/logo.png" alt="سهل" className="flex-shrink-0" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
             <div style={{ width: '80px', height: '24px', background: '#F1F5F9', borderRadius: '8px', marginBottom: '6px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
             <div style={{ width: '50px', height: '14px', background: '#F1F5F9', borderRadius: '6px', animation: 'shimmer 1.5s ease-in-out infinite' }} />
           </div>
@@ -82,9 +83,12 @@ const MyOrders = () => {
     <div className="min-h-screen bg-[#F8F9FA]" style={{ direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif' }}>
       <header className="bg-white border-b border-[#E2E8F0] py-4">
         <div className="container mx-auto px-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">طلباتي</h1>
-            <p className="text-sm text-[#475569]">{orders.length} طلب</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img src="/logo.png" alt="سهل" className="flex-shrink-0" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
+            <div>
+              <h1 className="text-2xl font-bold">طلباتي</h1>
+              <p className="text-sm text-[#475569]">{orders.length} طلب</p>
+            </div>
           </div>
           <div className="flex gap-2 items-center">
             <ThemeToggle size="sm" />

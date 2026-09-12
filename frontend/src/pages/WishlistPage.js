@@ -80,6 +80,7 @@ const WishlistPage = () => {
       <header style={{ background: '#fff', borderBottom: '1px solid #E2E8F0', padding: '16px 24px', position: 'sticky', top: 0, zIndex: 40 }}>
         <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <img src="/logo.png" alt="سهل" style={{ height: 30, width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
             <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/shop')}
               style={{ background: 'none', border: '1px solid #E2E8F0', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#475569', fontFamily: 'Tajawal,sans-serif' }}>
               <ArrowRight style={{ width: 15, height: 15 }} />متجر

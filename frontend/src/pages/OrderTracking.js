@@ -194,17 +194,20 @@ const OrderTracking = () => {
       {/* Header */}
       <header className="bg-white border-b border-[#E2E8F0] py-4 sticky top-0 z-40">
         <div className="container mx-auto px-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-xl font-bold flex items-center gap-2">
-              {isLive && (
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></span>
-                  مباشر
-                </span>
-              )}
-              تتبع الطلب
-            </h1>
-            <p className="text-xs text-[#475569] font-mono mt-0.5" dir="ltr">#{orderId.slice(-10)}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img src="/logo.png" alt="سهل" className="flex-shrink-0" style={{ height: 30, width: 'auto', objectFit: 'contain' }} />
+            <div>
+              <h1 className="text-xl font-bold flex items-center gap-2">
+                {isLive && (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></span>
+                    مباشر
+                  </span>
+                )}
+                تتبع الطلب
+              </h1>
+              <p className="text-xs text-[#475569] font-mono mt-0.5" dir="ltr">#{orderId.slice(-10)}</p>
+            </div>
           </div>
           <Button variant="outline" size="sm" onClick={() => navigate("/my-orders")}>
             <ArrowRight className="h-4 w-4 ml-1" />طلباتي

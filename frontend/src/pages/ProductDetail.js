@@ -104,6 +104,7 @@ const ProductDetail = () => {
       {/* Header */}
       <header className="bg-white border-b border-[#E2E8F0] py-3 sticky top-0 z-40">
         <div className="container mx-auto px-4 flex items-center gap-3">
+          <img src="/logo.png" alt="سهل" className="flex-shrink-0" style={{ height: 30, width: 'auto', objectFit: 'contain' }} />
           <Button variant="ghost" size="sm" onClick={() => navigate('/shop')}>
             <ArrowRight className="h-4 w-4 ml-1" />العودة للمتجر
           </Button>

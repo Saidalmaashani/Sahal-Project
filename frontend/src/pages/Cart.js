@@ -123,7 +123,8 @@ const Cart = () => {
   return (
     <div className="min-h-screen bg-[#F8F9FA]" style={{ direction: 'rtl', fontFamily: 'Tajawal,Cairo,sans-serif' }}>
       <header className="bg-white border-b border-[#E2E8F0] py-4">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 flex items-center justify-between">
+          <img src="/logo.png" alt="سهل" className="flex-shrink-0" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
           <Button variant="ghost" onClick={() => navigate('/shop')}>
             <ArrowRight className="h-4 w-4 ml-2" />متابعة التسوق
           </Button>

@@ -304,6 +304,7 @@ const DriverDashboard = () => {
       <header style={{ background: t.card, borderBottom: `1px solid ${t.border}`, padding: "14px 0", position: "sticky", top: 0, zIndex: 40 }}>
         <div className="container mx-auto px-4" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <img src="/logo.png" alt="سهل" style={{ height: 32, width: "auto", objectFit: "contain", flexShrink: 0 }} />
             <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg,#4338CA,#7C3AED)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Truck style={{ width: 20, height: 20, color: "#fff" }} />
             </div>

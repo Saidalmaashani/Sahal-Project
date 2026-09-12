@@ -160,7 +160,10 @@ const CustomerProfile = () => {
       {/* Header */}
       <header className="bg-white border-b border-[#E2E8F0] py-4">
         <div className="container mx-auto px-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">حسابي</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img src="/logo.png" alt="سهل" className="flex-shrink-0" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
+            <h1 className="text-2xl font-bold">حسابي</h1>
+          </div>
           <Button variant="outline" onClick={() => navigate('/shop')}>
             <ArrowRight className="h-4 w-4 ml-2" />العودة للمتجر
           </Button>

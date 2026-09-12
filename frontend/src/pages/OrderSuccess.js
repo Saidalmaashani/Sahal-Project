@@ -29,7 +29,8 @@ const OrderSuccess = () => {
   }, [sessionId]);
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center px-4">
+      <img src="/logo.png" alt="سهل" style={{ height: 72, width: 'auto', objectFit: 'contain', marginBottom: 20 }} />
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-center">

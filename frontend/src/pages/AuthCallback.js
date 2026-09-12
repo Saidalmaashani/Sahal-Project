@@ -42,7 +42,8 @@ const AuthCallback = () => {
   }, [location, navigate, setUser]);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <img src="/logo.png" alt="سهل" style={{ height: 72, width: 'auto', objectFit: 'contain', marginBottom: 20 }} />
       <div style={{ textAlign: 'center' }}>
         <div style={{ width: '48px', height: '48px', border: '4px solid #4338CA', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto' }}></div>
         <p style={{ marginTop: '1rem', color: '#475569', fontFamily: 'Tajawal,sans-serif' }}>جارٍ تسجيل الدخول...</p>
