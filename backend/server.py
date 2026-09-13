@@ -9,6 +9,7 @@ import secrets
 import hashlib
 import hmac
 import smtplib
+import socket
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timezone, timedelta
@@ -595,7 +596,14 @@ def _send_email_sync(to: str, subject: str, html_body: str) -> bool:
     msg['From']    = f"سهل Sahal <{SMTP_EMAIL}>"
     msg['To']      = to
     msg.attach(MIMEText(html_body, 'html', 'utf-8'))
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
+    # إجبار IPv4 — بعض أنوية Render بلا مسار IPv6 فيفشل DSN من Gmail بـ Errno 101
+    host = SMTP_HOST
+    try:
+        if not host.replace(".", "").isdigit():
+            host = socket.gethostbyname(SMTP_HOST)
+    except OSError:
+        pass
+    with smtplib.SMTP(host, SMTP_PORT, timeout=10) as server:
         server.ehlo()
         server.starttls()
         server.login(SMTP_EMAIL, SMTP_PASSWORD)
