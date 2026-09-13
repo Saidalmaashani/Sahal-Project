@@ -1,0 +1,10 @@
+# Sahal frontend security headers (Netlify/CDN format)
+# خادم frontend/server.js يضبطها مباشرةً في Render؛ هذه النسخة لأي مضيف CDN مستقبلي.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://sahal-project.onrender.com wss://sahal-project.onrender.com; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Cross-Origin-Opener-Policy: same-origin

@@ -334,3 +334,58 @@ def test_shopper_cannot_update_payment():
         headers=auth(state["shopper_token"]),
     )
     assert r.status_code in (400, 403)
+
+
+# ----- Hardening: سياسة كلمة المرور + قفل الحساب + عزل عناصر التاجر -----
+def test_register_rejects_short_password():
+    r = _post("/auth/register", json={
+        "email": f"weak_{SUFFIX}@test.com", "password": "short",
+        "name": "Weak", "role": "shopper", "phone": f"+968-{SUFFIX}-wk",
+    })
+    assert r.status_code == 400, r.text
+
+
+def test_login_locked_after_repeated_failures():
+    email = f"lock_{SUFFIX}@test.com"
+    _register("shopper", email)
+    for _ in range(5):
+        r = _post("/auth/login", json={"email": email, "password": "totally-wrong"})
+        assert r.status_code == 401
+    # حتى بكلمة مرور صحيحة — الحساب مغلق مؤقتاً
+    r = _post("/auth/login", json={"email": email, "password": PASSWORD})
+    assert r.status_code == 429
+
+
+def test_merchant_only_sees_own_order_items():
+    # تاجر ثانٍ + منتج ثانٍ في طلب واحد مشترك
+    m2 = _register("merchant", f"m_items_{SUFFIX}@test.com").json()["user"]["user_id"]
+    _patch(f"/admin/users/{m2}/approve", params={"is_approved": True},
+           headers=auth(state["admin_token"])).raise_for_status()
+    tok2 = _post("/auth/login", json={
+        "email": f"m_items_{SUFFIX}@test.com", "password": PASSWORD}).json()["token"]
+    r = _post("/stores", json={"name": "Store Items2", "description": "d"},
+              headers=auth(tok2))
+    assert r.status_code == 200, r.text
+    _patch(f"/stores/{r.json()['store_id']}/status", params={"status": "approved"},
+           headers=auth(state["admin_token"])).raise_for_status()
+    r = _post("/products", json={
+        "name": "Other Product", "description": "d",
+        "price": 5.0, "stock": 3, "category": "Other", "images": [],
+    }, headers=auth(tok2))
+    assert r.status_code == 200, r.text
+    other_pid = r.json()["product_id"]
+
+    r = _post("/checkout", json={
+        "items": [{"product_id": state["product_id"], "quantity": 1},
+                  {"product_id": other_pid, "quantity": 1}],
+        "delivery_address": "Ruwī, Masqat",
+    }, headers=auth(state["shopper_token"]))
+    assert r.status_code == 200, r.text
+    order_id = r.json()["order_id"]
+
+    mine = _get("/orders", headers=auth(state["merchant_token"])).json()
+    found = next((o for o in mine if o["order_id"] == order_id), None)
+    assert found is not None, "التاجر الأول يجب أن يرى طلبه المشترك"
+    item_ids = [i["product_id"] for i in found["items"]]
+    assert item_ids == [state["product_id"]], "لا يرى عناصر التاجر الآخر"
+    assert other_pid not in item_ids

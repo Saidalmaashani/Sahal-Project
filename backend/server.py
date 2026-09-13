@@ -40,7 +40,7 @@ MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 DB_NAME = os.environ.get('DB_NAME', 'sahal_db')
 JWT_SECRET = os.environ.get('JWT_SECRET', 'change-me-in-production-' + secrets.token_hex(16))
 JWT_ALGORITHM = 'HS256'
-JWT_EXPIRES_HOURS = 24 * 7  # أسبوع
+JWT_EXPIRES_HOURS = 24  # يوم واحد — يقلص نافذة التوكنات المسروقة
 
 STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
@@ -53,15 +53,21 @@ SMTP_PASSWORD  = os.environ.get('SMTP_PASSWORD', '')
 
 # Environment & feature flags
 ENV                 = os.environ.get('ENV', 'development')
-ALLOW_MOCK_PAYMENTS = os.environ.get('ALLOW_MOCK_PAYMENTS', 'true').lower() in ('1', 'true', 'yes')
+ALLOW_MOCK_PAYMENTS = os.environ.get('ALLOW_MOCK_PAYMENTS', 'false').lower() in ('1', 'true', 'yes')
 ADMIN_SETUP_TOKEN   = os.environ.get('ADMIN_SETUP_TOKEN', '')
 
+# Fail-safe: بدون JWT_SECRET صريح في الإنتاج يتعطل الإقلاع بدل تشغيل غير آمن
+if ENV == "production" and not os.environ.get("JWT_SECRET"):
+    raise RuntimeError("JWT_SECRET must be set explicitly in production (failsafe boot)")
+
 def _mock_payments_allowed() -> bool:
-    """الدفع التجريبي: مسموح في التطوير، وفي الإنتاج فقط ما دامت
-    بوابة Stripe غير مفعلة (مرحلة الاختبار). ينطفئ تلقائياً عند ربط Stripe."""
-    if ENV == "development":
-        return ALLOW_MOCK_PAYMENTS
-    return ALLOW_MOCK_PAYMENTS and not STRIPE_API_KEY
+    """الدفع التجريبي للتطوير/الاختبار فقط — يُحظر كلياً في الإنتاج مهما ضُبط المتغير.
+    لا يتحول أي طلب في الإنتاج إلى 'مدفوع' إلا عبر Stripe فعلي."""
+    if ENV == "production":
+        return False
+    if STRIPE_API_KEY:
+        return False
+    return ALLOW_MOCK_PAYMENTS
 ADMIN_INITIAL_PASSWORD = os.environ.get('ADMIN_INITIAL_PASSWORD', '')
 
 # VAPID keys for Web Push Notifications
@@ -101,6 +107,10 @@ ORDER_STATUS_AR = {
 }
 PAYMENT_STATUS_AR = {"pending": "قيد الدفع", "paid": "مدفوع", "failed": "فشل الدفع"}
 MAX_CART_QUANTITY = 99
+
+# قفل الحساب بعد محاولات دخول فاشلة متكررة (بغضّ النظر عن IP المتصل)
+MAX_LOGIN_ATTEMPTS = 5
+LOGIN_LOCK_MINUTES  = 15
 
 # Roles المسموح بالتسجيل الذاتي (admin يُنشأ فقط عبر seed/الإدارة)
 REGISTERABLE_ROLES = {"shopper", "merchant", "driver"}
@@ -426,7 +436,13 @@ async def get_current_user(
     if request:
         session_id = request.headers.get("X-Session-ID") or request.cookies.get("session_id")
         if session_id:
-            session = await db.user_sessions.find_one({"session_id": session_id}, {"_id": 0})
+            session = await db.user_sessions.find_one({
+                "session_id": session_id,
+                "$or": [
+                    {"expires_at": {"$exists": False}},
+                    {"expires_at": {"$gt": datetime.now(timezone.utc).isoformat()}},
+                ],
+            }, {"_id": 0})
             if session:
                 user = await db.users.find_one({"user_id": session["user_id"]}, {"_id": 0, "password_hash": 0})
                 if user:
@@ -440,10 +456,14 @@ async def get_current_user(
 @api_router.post("/auth/register")
 @limiter.limit("3/minute")
 async def register(payload: UserRegister, request: Request):
-    # تحقق من وجود الإيميل
+    # سياسة كلمة المرور — لا تسجيل بضعيف/قصير
+    if not payload.password or len(payload.password) < 8:
+        raise HTTPException(status_code=400, detail="كلمة المرور يجب ألا تقل عن 8 أحرف")
+
+    # تحقق من وجود الإيميل — رسالة عامة لا تكشف إن كان البريد مسجلاً
     existing = await db.users.find_one({"email": payload.email.lower()})
     if existing:
-        raise HTTPException(status_code=400, detail="البريد الإلكتروني مستخدم بالفعل")
+        raise HTTPException(status_code=400, detail="تعذر إنشاء الحساب — تحقق من البيانات")
 
     # تحقق من صحة الدور — admin غير مسموح بالتسجيل الذاتي
     if payload.role not in REGISTERABLE_ROLES:
@@ -513,11 +533,32 @@ async def register(payload: UserRegister, request: Request):
 @limiter.limit("5/minute")
 async def login(payload: UserLogin, request: Request):
     user = await db.users.find_one({"email": payload.email.lower()})
+
+    now = datetime.now(timezone.utc)
+    if user:
+        # قفل مؤقت بعد محاولات فاشلة — يقاوم تجاوز IP عبر X-Forwarded-For
+        locked_until = user.get("login_locked_until")
+        if locked_until and now.isoformat() < locked_until:
+            raise HTTPException(status_code=429, detail="تم إيقاف الدخول مؤقتاً بعد محاولات كثيرة — حاول لاحقاً")
+
     if not user:
         raise HTTPException(status_code=401, detail="بيانات الدخول غير صحيحة")
 
-    if not user.get("password_hash") or not await _averify_password(payload.password, user["password_hash"]):
+    ok = user.get("password_hash") and await _averify_password(payload.password, user["password_hash"])
+    if not ok:
+        attempts = int(user.get("login_failed_attempts") or 0) + 1
+        patch = {"login_failed_attempts": attempts}
+        if attempts >= MAX_LOGIN_ATTEMPTS:
+            patch["login_failed_attempts"] = 0
+            patch["login_locked_until"] = (now + timedelta(minutes=LOGIN_LOCK_MINUTES)).isoformat()
+        await db.users.update_one({"user_id": user["user_id"]}, {"$set": patch})
         raise HTTPException(status_code=401, detail="بيانات الدخول غير صحيحة")
+
+    # نجاح — تصفير العدادات
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {"login_failed_attempts": 0, "login_locked_until": None}}
+    )
 
     # تحقق من الموافقة (للتجار)
     if user["role"] == "merchant" and not user.get("is_approved"):
@@ -1678,7 +1719,12 @@ async def get_orders(authorization: Optional[str] = Header(None), request: Reque
         products = await db.products.find({"merchant_id": user["user_id"]}, {"_id": 0}).to_list(1000)
         product_ids = [p["product_id"] for p in products]
         all_orders = await db.orders.find({}, {"_id": 0}).to_list(1000)
-        orders = [o for o in all_orders if any(item["product_id"] in product_ids for item in o["items"])]
+        # يرى عناصر طلباته فقط — لا يطّلع على منتجات تجار آخرين في السلة المشتركة
+        orders = [{
+            **o,
+            "items": [i for i in o["items"] if i["product_id"] in product_ids],
+            "item_count": len(o["items"]),
+        } for o in all_orders if any(item["product_id"] in product_ids for item in o["items"])]
     else:
         orders = await db.orders.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(1000)
 
@@ -3138,6 +3184,7 @@ async def get_chat_history(authorization: Optional[str] = Header(None), request:
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB
+MAX_UPLOADS_PER_DAY = 20          # حد يومي لكل مستخدم يحمي قاعدة البيانات من الانتفاخ
 
 def _sniff_image_type(data: bytes) -> Optional[str]:
     """يكتشف نوع الصورة من Magic Bytes — لا يثق بـ Content-Type المُرسل من العميل"""
@@ -3169,7 +3216,16 @@ async def upload_image(
     request: Request = None
 ):
     """رفع صورة — يحفظها في MongoDB ويعيد URL دائم لا يتأثر بإعادة النشر"""
-    await get_current_user(authorization, request)
+    user = await get_current_user(authorization, request)
+
+    # حد أسبوعي يومي — يمنع انتفاخ قاعدة البيانات بصورة لا نهائية
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    mine_today = await db.uploaded_files.count_documents({
+        "user_id": user["user_id"],
+        "created_at": {"$gte": today_start},
+    })
+    if mine_today >= MAX_UPLOADS_PER_DAY:
+        raise HTTPException(status_code=429, detail="تجاوزت الحد اليومي لرفع الصور")
 
     # تحقق من الحجم أولاً قبل القراءة الكاملة (يمنع DoS على الذاكرة)
     if file.size and file.size > MAX_IMAGE_SIZE:
@@ -3192,6 +3248,7 @@ async def upload_image(
     # الحفظ في MongoDB بدل filesystem (يبقى بعد كل redeploy)
     await db.uploaded_files.insert_one({
         "file_id": file_id,
+        "user_id": user["user_id"],
         "ext": ext,
         "content_type": content_type,
         "data": contents,

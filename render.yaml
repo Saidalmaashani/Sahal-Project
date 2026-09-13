@@ -18,7 +18,7 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: CORS_ORIGINS
-        value: https://sahal-frontend.onrender.com
+        value: https://sahal-app.onrender.com
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
@@ -42,7 +42,7 @@ services:
       - key: BACKEND_URL
         value: https://sahal-project.onrender.com
       - key: FRONTEND_URL
-        value: https://sahal-frontend.onrender.com
+        value: https://sahal-app.onrender.com
       - key: SMTP_EMAIL
         sync: false
       - key: SMTP_PASSWORD
@@ -54,11 +54,11 @@ services:
 
   # ==================== Frontend ====================
   - type: web
-    name: Sahal-frontend
+    name: Sahal-App
     runtime: node
     rootDir: frontend
     buildCommand: npm install && npm run build
-    startCommand: npx serve -s build -l $PORT
+    startCommand: node server.js
     plan: free
     envVars:
       - key: REACT_APP_BACKEND_URL
