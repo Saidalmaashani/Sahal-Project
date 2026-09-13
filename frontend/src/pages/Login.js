@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
 import { Chrome } from 'lucide-react';
+// [rebuild-v2] أعد البناء بقيمة REACT_APP_GOOGLE_CLIENT_ID الحالية من Render
 
 const Login = () => {
   const navigate = useNavigate();
